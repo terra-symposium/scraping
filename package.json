@@ -1,0 +1,51 @@
+{
+	"name": "@terra-symposium/canvas-scraping",
+	"version": "0.1.0",
+	"description": "Shared Canvas module capture and transcript inventory workflows",
+	"license": "Apache-2.0",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/Terra-Symposium/canvas-scraping.git"
+	},
+	"homepage": "https://github.com/Terra-Symposium/canvas-scraping#readme",
+	"type": "module",
+	"packageManager": "pnpm@10.30.3",
+	"engines": {
+		"node": ">=20"
+	},
+	"files": [
+		"dist",
+		"src/cli/transcripts.mjs"
+	],
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		},
+		"./canvas": {
+			"types": "./dist/canvas.d.ts",
+			"import": "./dist/canvas.js"
+		}
+	},
+	"bin": {
+		"canvas-export": "./dist/cli/export.js",
+		"canvas-transcripts": "./src/cli/transcripts.mjs"
+	},
+	"scripts": {
+		"build": "tsc -p tsconfig.json",
+		"typecheck": "tsc --noEmit -p tsconfig.json",
+		"prepare": "pnpm run build",
+		"canvas:export": "node dist/cli/export.js",
+		"canvas:transcripts": "node src/cli/transcripts.mjs"
+	},
+	"dependencies": {
+		"playwright": "^1.62.1"
+	},
+	"devDependencies": {
+		"@types/node": "^24.0.0",
+		"typescript": "5.9.3"
+	},
+	"publishConfig": {
+		"access": "public"
+	}
+}
