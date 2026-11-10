@@ -1,13 +1,13 @@
 {
-	"name": "@terra-symposium/canvas-scraping",
-	"version": "0.1.0",
-	"description": "Shared Canvas module capture and transcript inventory workflows",
+	"name": "@terra-symposium/scraping",
+	"version": "0.2.0",
+	"description": "Reusable browser, authentication, parallel-work, Canvas, syllabus, and transcript workflows",
 	"license": "Apache-2.0",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/Terra-Symposium/canvas-scraping.git"
+		"url": "https://github.com/Terra-Symposium/scraping.git"
 	},
-	"homepage": "https://github.com/Terra-Symposium/canvas-scraping#readme",
+	"homepage": "https://github.com/Terra-Symposium/scraping#readme",
 	"type": "module",
 	"packageManager": "pnpm@10.30.3",
 	"engines": {
@@ -25,20 +25,40 @@
 		"./canvas": {
 			"types": "./dist/canvas.d.ts",
 			"import": "./dist/canvas.js"
+		},
+		"./workflows": {
+			"types": "./dist/workflows/index.d.ts",
+			"import": "./dist/workflows/index.js"
+		},
+		"./workflows/browser": {
+			"types": "./dist/workflows/browser.d.ts",
+			"import": "./dist/workflows/browser.js"
+		},
+		"./workflows/parallel": {
+			"types": "./dist/workflows/parallel.d.ts",
+			"import": "./dist/workflows/parallel.js"
+		},
+		"./workflows/syllabus": {
+			"types": "./dist/workflows/syllabus.d.ts",
+			"import": "./dist/workflows/syllabus.js"
 		}
 	},
 	"bin": {
 		"canvas-export": "./dist/cli/export.js",
-		"canvas-transcripts": "./src/cli/transcripts.mjs"
+		"canvas-transcripts": "./src/cli/transcripts.mjs",
+		"syllabus-fetch": "./dist/cli/syllabus.js"
 	},
 	"scripts": {
 		"build": "tsc -p tsconfig.json",
 		"typecheck": "tsc --noEmit -p tsconfig.json",
 		"prepare": "pnpm run build",
 		"canvas:export": "node dist/cli/export.js",
-		"canvas:transcripts": "node src/cli/transcripts.mjs"
+		"canvas:transcripts": "node src/cli/transcripts.mjs",
+		"syllabus:fetch": "node dist/cli/syllabus.js",
+		"quality": "pnpm --dir config run quality"
 	},
 	"dependencies": {
+		"adm-zip": "^0.6.1",
 		"playwright": "^1.62.1"
 	},
 	"devDependencies": {

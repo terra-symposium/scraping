@@ -1,64 +1,171 @@
-# Canvas Scraping
+# Terra Symposium Scraping
 
-Shared Canvas module capture and transcript inventory tools for Terra Symposium applications. The source of truth is the [Terra-Symposium/canvas-scraping repository](https://github.com/Terra-Symposium/canvas-scraping), consumed by Website and Uni Notes through a pinned Git dependency.
+Reusable browser workflows and local scraping tools for Terra Symposium Website and Uni Notes.
 
-The library exports reusable Canvas discovery and capture functions. Its `canvas-export` command saves module pages, links, attachments, a manifest, and a log locally. Its `canvas-transcripts` command inventories transcript files already saved to disk. The tools do not publish to Terra Docs/Sanity or send course material to an AI provider.
+## What it does
 
-## Install
+- Shares headed and headless browser setup and authenticated session helpers.
+- Shares bounded worker queues and cross-process workflow slots.
+- Captures Canvas modules, downloads Australian syllabuses, and inventories transcripts.
+- Leaves AI generation, publishing, and note formatting to the consuming application.
 
-The Website and Uni Notes repositories pin this package to a release tag and build it during dependency installation. If you use the commands in another project, add the package as a Git dependency and install the Playwright Chromium browser once:
+The detailed guides and API reference live in the [Docs instance](config/docs/index.md).
+
+## Prerequisites
+
+- Node.js 20 or later for the package and command-line tools.
+- Node.js 24.12 or later and pnpm 10.30.3 for repository Docs and quality tools.
+- Playwright Chromium for Canvas and syllabus browser workflows.
+
+## Get started
+
+From the repository root, install dependencies and build the package:
 
 ```sh
-pnpm add 'github:Terra-Symposium/canvas-scraping#v0.1.0'
+pnpm install
+pnpm run build
+```
+
+Install Chromium once before running browser workflows:
+
+```sh
 pnpm exec playwright install chromium
 ```
 
-## Export Canvas modules
+The Docs instance has its own dependencies. From the repository root:
 
 ```sh
-pnpm run canvas:export -- --headed --canvas-url=https://canvas.example.edu/dashboard --groups="Week 1,Week 2"
+pnpm --dir config install
+pnpm --dir config run docs
 ```
 
-The default output directory is `~/Downloads/canvas-export`. The first headed run opens a visible browser for sign-in and saves Playwright state outside the repository, under the user's application-support directory. Later runs can omit `--headed`. Use `--all-courses` to include visible courses whose titles do not contain a semester and year, or `--output=PATH` to choose another output directory.
+Open <http://127.0.0.1:2060/> to browse the local guides.
 
-The exporter only collects courses and module items available to the signed-in account. Review course rules and the visible page before including material. It does not collect grades, submissions, rosters, or private messages.
+## Usage
 
-## Inventory local transcripts
+### Install in Website or Uni Notes
+
+Consumers pin this public Git repository to a reviewed tag:
 
 ```sh
-pnpm run canvas:transcripts -- \
-  --input=/path/to/transcript-sources \
-  --output=/path/to/transcript-inventory \
-  --weeks=12 \
-  --mapping=/path/to/source-map.json \
-  --expected=/path/to/expected-meetings.json
+pnpm add 'github:Terra-Symposium/scraping#v0.2.0'
 ```
 
-`--mapping` and `--expected` are optional. The helper reads `.txt`, `.vtt`, and `.srt` files only; it does not access Canvas or another network service. It writes one `Week-##.txt` file per requested week and a `transcripts-manifest.json` with hashes, provenance, duplicates, unresolved sources, and coverage gaps.
+### Capture Canvas course modules
 
-## Library API
+```sh
+pnpm exec canvas-export --canvas-url=https://canvas.example.edu/dashboard --headed --groups="Week 1,Week 2"
+```
 
-Applications can use the same discovery and capture routines with their own authenticated Playwright context:
+The default export is written to `~/Downloads/canvas-export`. Use `--output=PATH` to choose a different directory and `--all-courses` to include visible courses without a semester and year in the title. Run `canvas-export --help` for all options. The first headed run can complete a normal Canvas sign-in; later runs can reuse saved state in headless mode.
+
+### Download an Australian syllabus
+
+```sh
+pnpm exec syllabus-fetch --state=NSW --headed
+```
+
+The helper supports ACT, NSW, NT, QLD, SA, TAS, VIC, and WA. It saves the downloaded Word file under `~/Downloads/terra-symposium-scraping/syllabuses` by default. See the [syllabus guide](config/docs/workflows/syllabus.md) for source details and API use.
+
+### Inventory saved transcripts
+
+```sh
+pnpm exec canvas-transcripts --input=/path/to/sources --output=/path/to/inventory --weeks=12
+```
+
+The helper reads local `.txt`, `.vtt`, and `.srt` files. It writes weekly files and a manifest with provenance, duplicates, unresolved matches, and coverage gaps.
+
+### Use the workflow API
 
 ```ts
-import { scrapeCanvasCourse } from '@terra-symposium/canvas-scraping';
+import { authenticateWorkflow, resolveWorkerCount, runQueued } from '@terra-symposium/scraping';
 
-const groups = await scrapeCanvasCourse({
-  page,
-  request: context.request,
-  course: { title: 'Network Fundamentals', url: 'https://canvas.example.edu/courses/123' },
-  output: '/tmp/canvas-export',
-  groupMatches: ['Week 1'],
-  log: (message) => console.log(message),
+const session = await authenticateWorkflow({
+  sessionName: 'course-workflow',
+  headed: false,
+  interactive: true,
+  open: async context => {
+    const page = await context.newPage();
+    await page.goto('https://example.edu/courses');
+    return page;
+  },
+  isReady: async page => page.locator('[data-course-list]').isVisible().catch(() => false),
 });
+
+try {
+  const failures = await runQueued(
+    ['course-1', 'course-2'],
+    resolveWorkerCount(2, 'courses'),
+    async course => collectCourse(course, session.value),
+  );
+  console.log(failures);
+} finally {
+  await session.close();
+}
 ```
 
-The returned groups contain the captured text, local file paths, safe source URLs, links, errors, and the path to each group's text file. Consumers remain responsible for authentication, storage, note formats, and any product-specific publishing.
+See the [browser](config/docs/workflows/browser-sessions.md), [parallel work](config/docs/workflows/parallel-work.md), and [API](config/docs/api/index.md) guides for full contracts.
 
-## Access and privacy
+See the [consumer integration guide](config/docs/workflows/consumer-integration.md) for Website and Uni Notes boundaries.
 
-The CLI is a user-run local tool. For agent-led Canvas collection, use the approved in-app browser workflow; do not use this Playwright CLI as an agent access route. Never commit browser storage, tokens, course exports, or transcript files to this repository.
+## Configuration and security
 
-## License
+| Name | Required | Purpose | Source |
+| --- | --- | --- | --- |
+| `PW_<DOMAIN>_WORKERS` | No | Worker limit for one workflow domain. | Shell or CI environment |
+| `PW_HEADED_WORKERS` | No | Worker limit when `--headed` is present. | Shell or CI environment |
+| `PW_WORKERS` | No | General worker limit. | Shell or CI environment |
+| `storageStatePath` | No | Playwright state-file path for one workflow. | API option; default is OS user storage |
 
-Apache-2.0. See [`LICENSE`](LICENSE).
+See [Browser sessions and authentication](config/docs/workflows/browser-sessions.md) for session lifecycle details.
+
+The browser helpers store state outside the repository by default. State files contain credentials and must remain private. Canvas collection is a user-run local workflow; do not use the CLI or Playwright helpers as an agent route for Canvas access.
+
+## Development and structure
+
+```text
+src/canvas.ts                 Canvas discovery and capture
+src/workflows/browser.ts      Headed, headless, and authenticated sessions
+src/workflows/parallel.ts     Worker counts, queues, and process slots
+src/workflows/syllabus.ts     Curriculum pages and Word downloads
+src/cli/                      Canvas, syllabus, and transcript commands
+config/docs/                   Docs instance content
+config/package.json            Docs and quality tooling
+```
+
+Website keeps its Gemini, Sanity, and product-specific generation logic. Uni Notes keeps its Markdown organization and content-review workflow.
+
+## Validation
+
+| Check | Command | Notes |
+| --- | --- | --- |
+| TypeScript build | `pnpm run build` | Emits declarations and JavaScript under `dist/`. |
+| Full quality suite | `pnpm run quality` | Runs configured format, lint, static checks, build, and Docs build. |
+| Docs build | `pnpm --dir config run build` | Writes the static site to `config/dist/docs`. |
+
+See [Quality and releases](config/docs/development/quality-and-release.md) for the configured checks and release steps.
+
+## Deployment and operations
+
+Consumers use reviewed Git tags. Update the package version and Git tag together, then update the Website and Uni Notes pins. The repository CI runs the quality wrapper and builds the Docs site. No website host or npm publishing workflow is configured here.
+
+## Data, privacy, and limitations
+
+Canvas and syllabus files are saved locally. The package does not send collected content to an AI provider, write to Terra Docs/Sanity, or edit Uni Notes. Transcript inventory is offline. Public curriculum pages can change their markup or download controls; inspect the visible page when a workflow stops matching.
+
+Use only material available through normal account access and allowed by the course or source terms. Keep browser state, exports, transcripts, and downloaded syllabuses out of Git.
+
+## References
+
+- [Docs guides and API reference](config/docs/index.md)
+- [Canvas export guide](config/docs/workflows/canvas.md)
+- [Syllabus acquisition guide](config/docs/workflows/syllabus.md)
+- [Transcript inventory guide](config/docs/workflows/transcripts.md)
+
+## Contributing
+
+Keep shared browser and concurrency behavior in `src/workflows/`. Keep service-specific selectors in their workflow adapter. Run `pnpm run quality` before opening a change and keep private browser data out of commits.
+
+## Credits and license
+
+Licensed under Apache-2.0. See [LICENSE](LICENSE).

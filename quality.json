@@ -1,0 +1,46 @@
+{
+	"$schema": "./config/node_modules/@terra-symposium/standards-quality/quality.schema.json",
+	"root": ".",
+	"configRoot": "config",
+	"sourceRoots": ["src"],
+	"extensions": [".js", ".mjs", ".ts", ".mts"],
+	"tools": {
+		"eslint": "eslint",
+		"knip": "knip",
+		"prettier": "prettier"
+	},
+	"lintRoots": ["src"],
+	"typecheckRoots": ["src"],
+	"tsconfig": "tsconfig.json",
+	"oneLineImports": true,
+	"prettierPrintWidth": 180,
+	"documentation": {
+		"required": {
+			"types": true,
+			"functions": false,
+			"exportedFunctions": true,
+			"noInlineFunctions": false
+		}
+	},
+	"enabledChecks": {
+		"format": true,
+		"lint": true,
+		"knip": true,
+		"type": true,
+		"recommend": true,
+		"name": true,
+		"alias": true
+	},
+	"qualityCommands": [
+		{
+			"name": "build",
+			"command": "pnpm",
+			"args": ["run", "build"]
+		},
+		{
+			"name": "docs-build",
+			"command": "pnpm",
+			"args": ["--dir", "config", "run", "build"]
+		}
+	]
+}

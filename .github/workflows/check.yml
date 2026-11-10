@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 jobs:
-  typecheck:
+  quality:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,7 +18,11 @@ jobs:
           version: 10.30.3
       - uses: actions/setup-node@v4
         with:
-          node-version: "24.12.0"
+          node-version: 24.12.0
           cache: pnpm
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            config/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
-      - run: pnpm run typecheck
+      - run: pnpm --dir config install --frozen-lockfile
+      - run: pnpm run quality
