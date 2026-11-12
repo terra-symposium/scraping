@@ -57,6 +57,7 @@
 		"canvas:transcripts": "node src/cli/transcripts.mjs",
 		"syllabus:fetch": "node dist/cli/syllabus.js",
 		"quality": "pnpm run quality:check",
+		"quality:all": "pnpm run quality:fix",
 		"quality:fix": "pnpm --dir config run quality:fix",
 		"quality:check": "pnpm --dir config run quality:check"
 	},

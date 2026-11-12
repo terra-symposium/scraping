@@ -5,7 +5,9 @@ settings:
   excludeLinksFromLockfile: false
 
 patchedDependencies:
-  '@terra-symposium/standards-quality@2.2.0': 7658e75f5585cd20695296ff66dff9679ebccf319ae0aa10cdaedca57e657e84
+  '@terra-symposium/standards-quality@2.2.0':
+    hash: 7658e75f5585cd20695296ff66dff9679ebccf319ae0aa10cdaedca57e657e84
+    path: patches/@terra-symposium__standards-quality@2.2.0.patch
 
 importers:
   .:
