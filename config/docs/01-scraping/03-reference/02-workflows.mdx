@@ -1,0 +1,197 @@
+---
+title: Workflow APIs
+description: Browser, authentication, parallel-work, and Australian syllabus API contracts.
+---
+
+The APIs on this page are exported from `@terra-symposium/scraping` and `@terra-symposium/scraping/workflows`. Browser, parallel-work, and syllabus functions also have focused subpaths; see the [API index](/01-scraping/03-reference/).
+
+<Nodes
+	direction="LR"
+	height={270}
+	nodes={`[
+    {"id":"workflows","type":"origin","data":{"title":"Workflow exports"}},
+    {"id":"browser","type":"process","data":{"title":"Browser sessions and authentication"}},
+    {"id":"parallel","type":"process","data":{"title":"Worker limits and queues"}},
+    {"id":"syllabus","type":"process","data":{"title":"Australian syllabus fetch and normalize"}}
+  ]`}
+	edges={`[
+    {"id":"workflow-browser","source":"workflows","target":"browser"},
+    {"id":"workflow-parallel","source":"workflows","target":"parallel"},
+    {"id":"workflow-syllabus","source":"workflows","target":"syllabus"}
+  ]`}
+/>
+
+## Browser session API
+
+### Public types and fields
+
+| Type                              | Shape                                                                                                                                      |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `WorkflowBrowserOptions`          | Optional headed mode, state file, persistent profile, browser channel or executable, launch arguments, and download setting.               |
+| `WorkflowBrowserSession`          | Playwright `Browser` and `BrowserContext` plus an idempotent async `close()` method.                                                       |
+| `WorkflowSessionFactoryOptions`   | Required `headed: boolean` and absolute `storageStatePath: string` values passed to `createSession`.                                       |
+| `AuthenticateWorkflowOptions<T>`  | Session name, optional state path, browser mode, sign-in policy, timeout, session factory, page/value callbacks, and optional diagnostics. |
+| `AuthenticatedWorkflowSession<T>` | A browser session with the callback result as `value: T` and the absolute `storageStatePath`.                                              |
+
+===[Browser launch option fields]
+| Field | Type | Default and behavior |
+| --- | --- | --- |
+| `headed` | `boolean` | `false`. Launch a visible Chromium window when true. |
+| `storageStatePath` | `string` | No state file. If supplied and it exists, load the Playwright state into the context. This launch helper does not save updated state. |
+| `userDataDir` | `string` | No persistent profile. When supplied, launch a persistent Chromium context; do not open the same profile in simultaneous Chromium processes. |
+| `channel` | `string` | Playwright browser channel, such as `chrome`. |
+| `executablePath` | `string` | Explicit Chromium executable path. |
+| `args` | `string[]` | Additional Chromium launch arguments. |
+| `acceptDownloads` | `boolean` | `true`. Enable Playwright download events in the context. |
+===
+
+### Functions
+
+- `resolveWorkflowStorageStatePath(sessionName: string): string` returns the absolute OS-level path for a stable workflow name.
+- `launchWorkflowSession(options?: WorkflowBrowserOptions): Promise<WorkflowBrowserSession>` launches Chromium and returns an owned browser/context pair.
+- `closeWorkflowSession(session)` closes a returned session or compatible browser/context pair. A session's own `close` callback is used when supplied.
+- `withWorkflowSession<T>(options, run): Promise<T>` runs a callback and closes the session in a `finally` block.
+- `authenticateWorkflow<T>(options): Promise<AuthenticatedWorkflowSession<T>>` checks application-specific readiness and can guide visible sign-in.
+
+`WorkflowBrowserSession.close()` is safe to call more than once. For non-persistent sessions it closes the context and owned browser process; for a persistent profile it closes the persistent context. Use `withWorkflowSession` when the callback should own cleanup, or call `close` in a `finally` block.
+
+### Authentication options
+
+===[Authentication option fields]
+| Field | Type | Default and behavior |
+| --- | --- | --- |
+| `sessionName` | `string` | Required stable name used to form the default state-file path. Names are lowercased and unsafe characters become hyphens. |
+| `storageStatePath` | `string` | The path from `resolveWorkflowStorageStatePath(sessionName)`. Supply an explicit path to override it. |
+| `headed` | `boolean` | `false`. Mode requested for the returned session. |
+| `interactive` | `boolean` | `false`. If false, failed readiness closes the session and throws. If true, allow manual sign-in in a visible session. |
+| `timeoutMs` | `number` | 15 minutes. Maximum time to wait for the readiness callback during interactive sign-in. |
+| `createSession` | `(options: WorkflowSessionFactoryOptions) => Promise<WorkflowBrowserSession>` | Optional factory for app-specific channel, executable, arguments, or profile configuration. |
+| `open` | `(context: BrowserContext) => Promise<T>` | Required callback that opens the app and returns the value checked by `isReady`. |
+| `isReady` | `(value: T) => Promise<boolean>` | Required app-specific readiness check. It determines whether saved state is usable; the helper does not interpret login pages itself. |
+| `captureFailure` | `(value: T, reason: string) => Promise<void>` | Optional screenshot or diagnostic callback after a readiness check fails. |
+| `onInteractiveStart` | No-argument callback returning `void` or `Promise<void>` | Optional callback immediately before the user must finish sign-in. |
+| `authenticationRequiredMessage` | `string` | Custom error message when sign-in is needed but `interactive` is false. |
+===
+
+The helper first opens the requested mode and runs `isReady`. When ready, it saves the browser state and returns an open session. When not ready, it calls `captureFailure` if supplied. With interactive sign-in disabled, it closes the session and throws. With interactive sign-in enabled, it polls readiness until success or timeout. A headless request is closed and retried visibly; after sign-in, the helper saves the state, opens a fresh headless session, and checks readiness again. A headed caller keeps the visible session.
+
+Failed operations close the active session before rethrowing. Successful callers must close the returned session.
+
+===[Default storage-state paths]
+
+- macOS: `~/Library/Application Support/Terra Symposium/Workflows/<session-name>/storage-state.json`
+- Other platforms: `~/.config/terra-symposium/workflows/<session-name>/storage-state.json`
+
+# The helper creates the state directory with owner-only permissions and restricts the state file to the owner where supported. Storage state contains active login data; keep it private and out of Git.
+
+See the [browser guide](/01-scraping/02-guides/01-browser-sessions/) for lifecycle examples and consumer guidance.
+
+## Parallel work API
+
+### Public types
+
+| Type                        | Fields                                                                                                                                        |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ResolveWorkerCountOptions` | Optional `argv: readonly string[]` and `env: NodeJS.ProcessEnv` inputs for deterministic worker-count lookup.                                 |
+| `QueueFailure<T>`           | `index: number`, original `item: T`, and original thrown `error: unknown`.                                                                    |
+| `WorkflowSlotOptions`       | Required pool `name: string` and `size: number`, optional lock `directory: string`, `pollMs: number`, and cancellation `signal: AbortSignal`. |
+
+### Functions and worker counts
+
+- `resolveWorkerCount(fallback = 5, domain?, options?): number` selects a worker count from CLI and environment overrides.
+- `runQueued<T>(items, workerCount, execute): Promise<QueueFailure<T>[]>` processes items with bounded in-process concurrency.
+- `acquireWorkflowSlot(options): Promise<() => Promise<void>>` waits for a cross-process slot and returns its release callback.
+
+`resolveWorkerCount` reads the first valid positive safe integer in this precedence:
+
+1. `--workers=N` or `--workers N`.
+2. `PW_<DOMAIN>_WORKERS` when a domain is supplied. The domain is uppercased before lookup.
+3. `PW_HEADED_WORKERS`, only when `argv` contains `--headed`.
+4. `PW_WORKERS`.
+5. The supplied fallback, defaulting to `5`. An invalid fallback resolves to `1`.
+
+Pass `argv` and `env` through `ResolveWorkerCountOptions` for deterministic lookup. Zero, negative, fractional, non-numeric, and unsafe integer overrides are ignored.
+
+`runQueued` starts at most the selected worker count, passing each input to `execute(item, index)` once. It captures rejections as `QueueFailure` records sorted by input index. Invalid, non-finite, zero, or negative counts result in one worker; finite fractions are floored. A failed item does not cancel or retry sibling work, and the helper does not throw an aggregate error.
+
+### Cross-process slots
+
+===[Slot directory, polling, and cancellation]
+`WorkflowSlotOptions` requires a positive safe integer `size` and stable `name`. Without `directory`, the pool is under the OS temporary directory and scoped to a hash of the resolved current working directory plus the sanitized name. Processes using the same working directory and name share the default pool.
+
+Set a `directory` that resolves to the same path in each process when callers from different working directories must coordinate. An explicit directory replaces the default name-scoped location. Callers sharing a pool must agree on its size.
+
+# The default polling interval is 250 milliseconds; set `pollMs` to change it. Pass an `AbortSignal` to cancel a waiting acquisition; the helper throws its reason when available. Invalid lock files and locks owned by dead processes are removed when encountered. A lock whose process cannot be inspected because of permission limits is treated as active.
+
+Always release the slot in `finally`:
+
+```ts
+import { acquireWorkflowSlot } from '@terra-symposium/scraping';
+
+const release = await acquireWorkflowSlot({ name: 'canvas-downloads', size: 2 });
+try {
+	await downloadBatch();
+} finally {
+	await release();
+}
+```
+
+See the [parallel-work guide](/01-scraping/02-guides/02-parallel-work/) for configuration examples and operational notes.
+
+## Australian syllabus API
+
+### Types and configured sources
+
+| Type or export                         | Shape and purpose                                                                                                            |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `AustralianSyllabusState`              | One of `ACT`, `NSW`, `NT`, `QLD`, `SA`, `TAS`, `VIC`, or `WA`.                                                               |
+| `AustralianSyllabusSource`             | Required public page `url: string` and optional default `syllabusName: string`.                                              |
+| `AUSTRALIAN_SYLLABUS_SOURCES`          | Record mapping each jurisdiction to its configured source page. NSW defaults to `English K–10 (2022)`.                       |
+| `PrepareAustralianSyllabusPageOptions` | Optional NSW picker value `syllabusName: string`.                                                                            |
+| `FetchAustralianSyllabusOptions`       | Required `state` plus optional output, filename, selection, browser, state-file, timeout, and sign-in callback fields below. |
+| `FetchedAustralianSyllabus`            | `state`, sanitized `sourceUrl`, absolute `filePath`, `fileName`, and ISO `capturedAt` time.                                  |
+| `NormalizeSyllabusDocumentOptions`     | Optional `outputDirectory` and direct-document `fileName`.                                                                   |
+| `NormalizedSyllabusDocument`           | Absolute output `filePath`, `fileName`, input `sourcePath`, and optional ZIP `archiveEntry`.                                 |
+
+===[Configured public sources]
+| State | Source page | Workflow behavior |
+| --- | --- | --- |
+| ACT | [ACT curriculum](https://www.act.gov.au/education-and-training/teaching-and-assessment/what-we-teach-curriculum#High-school-years-7-to-10-) | Open the configured public curriculum page. |
+| NSW | [NSW Curriculum](https://curriculum.nsw.edu.au/custom) | Search the custom picker; default to English K–10 (2022), select the matching syllabus, and check enabled curriculum boxes. |
+| NT | [NT curriculum policy](https://education.nt.gov.au/policies/curriculum) | Open the configured public curriculum page. |
+| QLD | [Queensland P–10 resources](https://www.qcaa.qld.edu.au/p-10/aciq/version-8/p-10-resources-search) | Open the configured resources page. |
+| SA | [South Australian Birth to Year 10 curriculum](https://www.education.sa.gov.au/students/curriculum-and-learning/curriculum-birth-year-10#schooling-%E2%80%93-reception-to-year-10) | Open the configured public curriculum page. |
+| TAS | [Tasmanian curriculum](https://www.decyp.tas.gov.au/learning/primary-school-to-year-12/curriculum/) | Open the configured public curriculum page. |
+| VIC | [Victorian Foundation to 10 resources](https://www.vcaa.vic.edu.au/curriculum/foundation-10/curriculum-area-resources/curriculum-area-resources-0) | Open the configured public curriculum page. |
+| WA | [WA K–10 curriculum browser](https://k10outline.scsa.wa.edu.au/home/teaching/curriculum-browser) | Open the configured public curriculum page. |
+===
+
+### Fetch options
+
+===[FetchAustralianSyllabusOptions fields]
+| Field | Type | Default and behavior |
+| --- | --- | --- |
+| `state` | `AustralianSyllabusState` | Required jurisdiction code. |
+| `outputDirectory` | `string` | `~/Downloads/terra-symposium-scraping/syllabuses`. |
+| `fileName` | `string` | Browser-suggested filename. The saved basename is sanitized. |
+| `syllabusName` | `string` | `English K–10 (2022)` on NSW; unused by other current adapters. |
+| `headed` | `boolean` | `false`. Keep Chromium visible when true. |
+| `interactive` | `boolean` | Defaults to `headed`. Allow visible sign-in if the readiness check fails. |
+| `storageStatePath` | `string` | Per-jurisdiction OS-level workflow path; set to choose another Playwright state file. |
+| `timeoutMs` | `number` | `30000` for the download control; when set, also used as the interactive-auth timeout. Authentication defaults to 15 minutes when omitted. |
+| `onInteractiveStart` | No-argument callback returning `void` or `Promise<void>` | Optional callback immediately before manual sign-in. |
+| `createSession` | `(options: WorkflowSessionFactoryOptions) => Promise<WorkflowBrowserSession>` | Optional browser-session factory for a consumer-specific channel, executable, or persistent profile. The workflow owns and closes the returned session. |
+===
+
+### Functions
+
+- `prepareAustralianSyllabusPage(page, state, options?): Promise<Page>` opens the configured page when needed. NSW selects the requested/default custom syllabus and prepares its enabled curriculum checkboxes. Other current adapters leave the configured page as-is.
+- `isAustralianSyllabusPageReady(page): Promise<boolean>` rejects login, SAML, and authentication routes, then checks for visible body text. It indicates a public page is readable; it is not an account-credential check.
+- `fetchAustralianSyllabus(options): Promise<FetchedAustralianSyllabus>` opens the jurisdiction page, prepares its download UI, and downloads the visible Word file.
+- `normalizeSyllabusDocument(file, options?): Promise<NormalizedSyllabusDocument>` copies a local Word document or extracts one Word document from a ZIP archive.
+
+The fetch workflow is headless and non-interactive by default. Setting `headed: true` requests a visible browser and allows interactive sign-in unless `interactive` is explicitly false. A headless caller can set `interactive: true` to show a browser only when saved state is not ready. Each jurisdiction uses a separate state-file name. Pass `createSession` when the consumer needs its own browser channel or profile.
+
+The normalizer accepts `.doc`, `.docx`, and `.zip` files. It copies Word files without converting them. For ZIP input, it chooses the first alphabetically sorted Word entry whose path does not contain “syllabus support”, extracts only that file into a subdirectory named for the archive, and reports its archive path. It does not unpack the rest of the archive. Unsupported file extensions and archives without a matching Word document throw.
+
+See the [Australian syllabus guide](/01-scraping/02-guides/04-australian-syllabus/) for source links, examples, output paths, and maintenance notes.

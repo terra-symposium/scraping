@@ -18,6 +18,7 @@ import AdmZip from 'adm-zip';
 
 // TYPES
 import type { Page } from 'playwright';
+import type { WorkflowBrowserSession, WorkflowSessionFactoryOptions } from './browser.js';
 
 /*//////////////////////////////////////////////////
 REGEX
@@ -72,6 +73,8 @@ export type FetchAustralianSyllabusOptions = PrepareAustralianSyllabusPageOption
 	timeoutMs?: number;
 	/** Optional callback shown when manual sign-in is needed. */
 	onInteractiveStart?: () => void | Promise<void>;
+	/** Optional factory for consumer-specific browser sessions. */
+	createSession?: (options: WorkflowSessionFactoryOptions) => Promise<WorkflowBrowserSession>;
 };
 
 /** Metadata for a locally saved syllabus download. */
@@ -123,13 +126,12 @@ export type NormalizedSyllabusDocument = {
 export async function prepareAustralianSyllabusPage(page: Page, state: AustralianSyllabusState, options: PrepareAustralianSyllabusPageOptions = {}): Promise<Page> {
 	const source = AUSTRALIAN_SYLLABUS_SOURCES[state];
 	if (!source) throw new Error(`No curriculum source is configured for ${state}.`);
-	const current = (() => {
-		try {
-			return new URL(page.url());
-		} catch {
-			return undefined;
-		}
-	})();
+	let current: URL | undefined;
+	try {
+		current = new URL(page.url());
+	} catch {
+		current = undefined;
+	}
 	const target = new URL(source.url);
 	if (!current || current.origin !== target.origin || current.pathname !== target.pathname) await page.goto(source.url, { waitUntil: 'domcontentloaded' });
 	if (state !== 'NSW') return page;
@@ -144,24 +146,76 @@ export async function prepareAustralianSyllabusPage(page: Page, state: Australia
 		const checkbox = checkboxes.nth(index);
 		if (!(await checkbox.isDisabled()) && !(await checkbox.isChecked())) await checkbox.click({ force: true });
 	}
-	await page
-		.locator('.tree-picker-id-content input')
-		.first()
-		.check({ force: true })
-		.catch(() => undefined);
+	await page.locator('.tree-picker-id-content input').first().check({ force: true }).catch(ignoreSyllabusFailure);
 	return page;
 }
 
+/**
+ * Sanitizes an operating-system filename using only printable, portable characters.
+ *
+ * @param value - Suggested filename from a curriculum download.
+ * @return Safe filename with a fallback when the suggestion becomes empty.
+ */
 function sFileName(value: string): string {
+	const characters = [];
+	for (const character of path.basename(value.replaceAll('\\', '/'))) {
+		const code = character.codePointAt(0) || 0;
+		characters.push(code < 0x20 || code === 0x7f || '<>:"|?*'.includes(character) ? '_' : character);
+	}
 	return (
-		Array.from(path.basename(value.replaceAll('\\', '/')), (character) => {
-			const code = character.codePointAt(0) || 0;
-			return code < 0x20 || code === 0x7f || '<>:"|?*'.includes(character) ? '_' : character;
-		})
+		characters
 			.join('')
 			.trim()
 			.replace(/[. ]+$/g, '') || 'syllabus.docx'
 	);
+}
+
+/**
+ * Absorbs a best-effort page cleanup or locator failure.
+ *
+ * @return `undefined` so callers can continue with optional controls.
+ */
+function ignoreSyllabusFailure(): undefined {
+	return undefined;
+}
+
+/**
+ * Compares syllabus archive entries by their stored paths.
+ *
+ * @param left - First archive entry.
+ * @param right - Second archive entry.
+ * @return Locale comparison result for the entry names.
+ */
+function compArchiveEntryNames(left: { entryName: string }, right: { entryName: string }): number {
+	return left.entryName.localeCompare(right.entryName);
+}
+
+/**
+ * Checks whether the syllabus page body is visible, treating a locator timeout as not ready.
+ *
+ * @param page - Curriculum page whose body is being checked.
+ * @return Whether the body locator was visible within one second.
+ */
+async function isSyllabusBodyVisible(page: Page): Promise<boolean> {
+	try {
+		return await page.locator('body').isVisible({ timeout: 1_000 });
+	} catch {
+		return false;
+	}
+}
+
+/**
+ * Reads syllabus body text when available, treating a detached or unavailable body as empty.
+ *
+ * @param page - Curriculum page whose body is being read.
+ * @return Body text, or an empty string when reading fails.
+ */
+async function readSyllabusBodyText(page: Page): Promise<string> {
+	try {
+		return await page.locator('body').innerText();
+	} catch {
+		return '';
+	}
 }
 
 /**
@@ -173,17 +227,8 @@ function sFileName(value: string): string {
  */
 export async function isAustralianSyllabusPageReady(page: Page): Promise<boolean> {
 	if (/login|saml|auth|signin/i.test(new URL(page.url()).pathname)) return false;
-	if (
-		!(await page
-			.locator('body')
-			.isVisible({ timeout: 1_000 })
-			.catch(() => false))
-	)
-		return false;
-	const text = await page
-		.locator('body')
-		.innerText()
-		.catch(() => '');
+	if (!(await isSyllabusBodyVisible(page))) return false;
+	const text = await readSyllabusBodyText(page);
 	return text.trim().length > 0 && !/sign in to continue|authentication required/i.test(text.slice(0, 2_000));
 }
 
@@ -198,29 +243,45 @@ export async function fetchAustralianSyllabus(options: FetchAustralianSyllabusOp
 	const source = AUSTRALIAN_SYLLABUS_SOURCES[options.state];
 	if (!source) throw new Error(`No curriculum source is configured for ${options.state}.`);
 	const timeoutMs = options.timeoutMs || 30_000;
+	/**
+	 * Opens the selected jurisdiction's page in the authenticated browser context.
+	 *
+	 * @param context - Playwright context already configured by the shared workflow session.
+	 * @return The page after its initial curriculum navigation.
+	 */
+	async function openSyllabusPage(context: import('playwright').BrowserContext): Promise<Page> {
+		const page = await context.newPage();
+		await page.goto(source.url, { waitUntil: 'domcontentloaded' });
+		return page;
+	}
+	/**
+	 * Waits for the jurisdiction page to start its Word download and reports a useful timeout.
+	 *
+	 * @param page - Prepared curriculum page.
+	 * @return The Playwright download event.
+	 */
+	async function waitForSyllabusDownload(page: Page) {
+		try {
+			return await page.waitForEvent('download', { timeout: timeoutMs });
+		} catch (cause) {
+			throw new Error(`The ${options.state} curriculum page did not start a Word download.`, { cause });
+		}
+	}
 	const session = await authenticateWorkflow<Page>({
 		sessionName: `syllabus-${options.state.toLowerCase()}`,
 		storageStatePath: options.storageStatePath || resolveWorkflowStorageStatePath(`syllabus-${options.state.toLowerCase()}`),
 		headed: options.headed,
 		interactive: options.interactive ?? options.headed ?? false,
 		timeoutMs: options.timeoutMs || 15 * 60_000,
-		open: async (context) => {
-			const page = await context.newPage();
-			await page.goto(source.url, { waitUntil: 'domcontentloaded' });
-			return page;
-		},
+		createSession: options.createSession,
+		open: openSyllabusPage,
 		isReady: isAustralianSyllabusPageReady,
 		onInteractiveStart: options.onInteractiveStart,
 		authenticationRequiredMessage: 'The curriculum page requires sign-in. Retry with a headed interactive session.',
 	});
 	try {
 		const page = await prepareAustralianSyllabusPage(session.value, options.state, options);
-		const [download] = await Promise.all([
-			page.waitForEvent('download', { timeout: timeoutMs }).catch((cause: unknown) => {
-				throw new Error(`The ${options.state} curriculum page did not start a Word download.`, { cause });
-			}),
-			page.getByRole('button', { name: /download as word/i }).click({ timeout: timeoutMs }),
-		]);
+		const [download] = await Promise.all([waitForSyllabusDownload(page), page.getByRole('button', { name: /download as word/i }).click({ timeout: timeoutMs })]);
 		const fileName = sFileName(options.fileName || download.suggestedFilename());
 		const outputDir = path.resolve(options.outputDirectory || path.join(os.homedir(), 'Downloads', 'terra-symposium-scraping', 'syllabuses'));
 		await mkdir(outputDir, { recursive: true, mode: 0o700 });
@@ -254,10 +315,12 @@ export async function normalizeSyllabusDocument(file: string, options: Normalize
 		return { filePath, fileName, sourcePath };
 	}
 	if (!/^\.zip$/i.test(ext)) throw new Error(`Unsupported syllabus file type: ${ext || '(no extension)'}.`);
-	const entry = new AdmZip(sourcePath)
-		.getEntries()
-		.filter((entry) => !entry.isDirectory && DOCX_I_REGEX.test(path.extname(entry.entryName)) && !/syllabus\s*support/i.test(entry.entryName))
-		.sort((left, right) => left.entryName.localeCompare(right.entryName))[0];
+	const wordEntries = [];
+	for (const entry of new AdmZip(sourcePath).getEntries()) {
+		if (!entry.isDirectory && DOCX_I_REGEX.test(path.extname(entry.entryName)) && !/syllabus\s*support/i.test(entry.entryName)) wordEntries.push(entry);
+	}
+	wordEntries.sort(compArchiveEntryNames);
+	const entry = wordEntries[0];
 	if (!entry) throw new Error('No syllabus Word documents were found in the ZIP archive.');
 	const archiveDir = path.join(outputDir, sFileName(path.basename(baseName, ext)));
 	await mkdir(archiveDir, { recursive: true, mode: 0o700 });

@@ -11,6 +11,11 @@ permissions:
 jobs:
   quality:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+      security-events: read
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -25,4 +30,7 @@ jobs:
             config/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm --dir config install --frozen-lockfile
-      - run: pnpm run quality
+      - name: Run full-scope Quality
+        run: pnpm run quality:check
+        env:
+          GH_TOKEN: ${{ github.token }}

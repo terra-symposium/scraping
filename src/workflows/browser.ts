@@ -84,6 +84,40 @@ export type AuthenticatedWorkflowSession<T> = WorkflowBrowserSession & {
 	/** The absolute Playwright storage-state path. */
 	storageStatePath: string;
 };
+
+/** Resolves cleanup failures to `undefined` so best-effort resource cleanup can continue.
+ *
+ * @return `undefined` so the original workflow result or error remains authoritative.
+ */
+function ignoreCleanupFailure(): undefined {
+	return undefined;
+}
+
+/** Checks whether a saved Playwright state file is accessible without treating absence as fatal.
+ *
+ * @param storageStatePath Absolute path to the state file to check.
+ *
+ * @return Whether the file can be accessed.
+ */
+async function storageStateExists(storageStatePath: string): Promise<boolean> {
+	try {
+		await access(storageStatePath);
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+/** Launches the default Chromium session for an authentication workflow.
+ *
+ * @param options Visibility and storage-state settings forwarded from the workflow.
+ *
+ * @return A Chromium session owned by the workflow.
+ */
+function createDefaultWorkflowSession(options: WorkflowSessionFactoryOptions): Promise<WorkflowBrowserSession> {
+	return launchWorkflowSession({ headed: options.headed, storageStatePath: options.storageStatePath });
+}
+
 /*//////////////////////////////////////////////////
 HELPERS
 //////////////////////////////////////////////////*/
@@ -123,49 +157,37 @@ export async function launchWorkflowSession(options: WorkflowBrowserOptions = {}
 		...(options.executablePath ? { executablePath: options.executablePath } : {}),
 		...(options.args?.length ? { args: options.args } : {}),
 	};
-	const contextOptions = {
-		acceptDownloads: options.acceptDownloads ?? true,
-		...(statePath &&
-		(await access(statePath)
-			.then(() => true)
-			.catch(() => false))
-			? { storageState: statePath }
-			: {}),
-	};
+	const contextOptions = { acceptDownloads: options.acceptDownloads ?? true, ...(statePath && (await storageStateExists(statePath)) ? { storageState: statePath } : {}) };
 	if (options.userDataDir) {
 		const context = await chromium.launchPersistentContext(path.resolve(options.userDataDir), { ...launchOptions, ...contextOptions });
 		const browser = context.browser();
 		if (!browser) {
-			await context.close().catch(() => undefined);
+			await context.close().catch(ignoreCleanupFailure);
 			throw new Error('Persistent Chromium context did not expose a Browser handle.');
 		}
 		let closed = false;
-		return {
-			browser,
-			context,
-			close: async () => {
-				if (closed) return;
-				closed = true;
-				await context.close().catch(() => undefined);
-			},
-		};
+		/** Closes the persistent context and its browser process only once. */
+		async function closePersistentContext(): Promise<void> {
+			if (closed) return;
+			closed = true;
+			await context.close().catch(ignoreCleanupFailure);
+		}
+		return { browser, context, close: closePersistentContext };
 	}
 	const browser = await chromium.launch(launchOptions);
 	try {
 		const context = await browser.newContext(contextOptions);
 		let closed = false;
-		return {
-			browser,
-			context,
-			close: async () => {
-				if (closed) return;
-				closed = true;
-				await context.close().catch(() => undefined);
-				await browser.close().catch(() => undefined);
-			},
-		};
+		/** Closes both resources owned by this nonpersistent workflow session once. */
+		async function closeWorkflowBrowser(): Promise<void> {
+			if (closed) return;
+			closed = true;
+			await context.close().catch(ignoreCleanupFailure);
+			await browser.close().catch(ignoreCleanupFailure);
+		}
+		return { browser, context, close: closeWorkflowBrowser };
 	} catch (cause) {
-		await browser.close().catch(() => undefined);
+		await browser.close().catch(ignoreCleanupFailure);
 		throw cause;
 	}
 }
@@ -182,8 +204,8 @@ export async function closeWorkflowSession(session: Pick<WorkflowBrowserSession,
 		await session.close();
 		return;
 	}
-	await session.context.close().catch(() => undefined);
-	await session.browser.close().catch(() => undefined);
+	await session.context.close().catch(ignoreCleanupFailure);
+	await session.browser.close().catch(ignoreCleanupFailure);
 }
 
 /**
@@ -203,12 +225,17 @@ export async function withWorkflowSession<T>(options: WorkflowBrowserOptions, ru
 	}
 }
 
+/** Persists browser login state with private permissions on its directory and file.
+ *
+ * @param context Browser context whose authenticated state is saved.
+ * @param storageStatePath Absolute destination for the Playwright state file.
+ */
 async function saveStorageState(context: BrowserContext, storageStatePath: string): Promise<void> {
 	const dir = path.dirname(storageStatePath);
 	await mkdir(dir, { recursive: true, mode: 0o700 });
-	await chmod(dir, 0o700).catch(() => undefined);
+	await chmod(dir, 0o700).catch(ignoreCleanupFailure);
 	await context.storageState({ path: storageStatePath });
-	await chmod(storageStatePath, 0o600).catch(() => undefined);
+	await chmod(storageStatePath, 0o600).catch(ignoreCleanupFailure);
 }
 
 /**
@@ -225,18 +252,22 @@ export async function authenticateWorkflow<T>(options: AuthenticateWorkflowOptio
 	let session: WorkflowBrowserSession | undefined;
 	let value!: T;
 
-	const open = async (headed: boolean): Promise<void> => {
-		session = await (
-			options.createSession || ((settings: WorkflowSessionFactoryOptions) => launchWorkflowSession({ headed: settings.headed, storageStatePath: settings.storageStatePath }))
-		)({ headed, storageStatePath });
+	const createSession = options.createSession ?? createDefaultWorkflowSession;
+	/** Opens the consumer's app state in a new browser session using the selected headed mode. */
+	async function open(headed: boolean): Promise<void> {
+		session = await createSession({ headed, storageStatePath });
 		value = await options.open(session.context);
-	};
+	}
 
-	const captureFailure = async (reason: string): Promise<void> => {
+	/** Captures the current app state when a saved or newly signed-in session fails validation. */
+	async function captureFailure(reason: string): Promise<void> {
 		if (options.captureFailure) await options.captureFailure(value, reason);
-	};
+	}
 
-	const ready = async (): Promise<boolean> => options.isReady(value);
+	/** Checks whether the current app-specific value represents an authenticated session. */
+	async function ready(): Promise<boolean> {
+		return options.isReady(value);
+	}
 	try {
 		await open(requestedHeaded);
 		if (await ready()) {
@@ -254,7 +285,11 @@ export async function authenticateWorkflow<T>(options: AuthenticateWorkflowOptio
 		const deadline = Date.now() + timeoutMs;
 		while (!(await ready())) {
 			if (Date.now() >= deadline) throw new Error(`Interactive authentication timed out after ${Math.ceil(timeoutMs / 60_000)} minutes.`);
-			await new Promise<void>((resolve) => setTimeout(resolve, Math.min(1_000, deadline - Date.now())));
+			/** Waits for the next bounded readiness poll of the interactive browser. */
+			function waitForInteractivePoll(resolve: () => void): void {
+				setTimeout(resolve, Math.min(1_000, deadline - Date.now()));
+			}
+			await new Promise<void>(waitForInteractivePoll);
 		}
 		await saveStorageState(session!.context, storageStatePath);
 		if (!requestedHeaded) {

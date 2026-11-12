@@ -1,0 +1,151 @@
+---
+title: Transcript inventory
+description: Inventory local transcript and caption files with week coverage, duplicate detection, and provenance metadata.
+---
+
+The `canvas-transcripts` command organizes local transcript and caption files into weekly text files and a JSON coverage report. It never opens a browser, fetches remote content, modifies Canvas, or changes the input files.
+
+## Inventory flow
+
+<Nodes
+	direction="TB"
+	height={500}
+	nodes={`[
+    {"id":"input","type":"origin","data":{"title":"Local transcript source tree"}},
+    {"id":"filter","type":"process","data":{"title":"Select supported transcript files"}},
+    {"id":"mapping","type":"decision","data":{"title":"Does mapping assign a week?"}},
+    {"id":"manual","type":"process","data":{"title":"Use manual week and metadata"}},
+    {"id":"infer","type":"process","data":{"title":"Infer week from path or filename"}},
+    {"id":"coverage","type":"process","data":{"title":"Check expected meetings if supplied"}},
+    {"id":"output","type":"terminal","data":{"title":"Write weekly text and manifest"}}
+  ]`}
+	edges={`[
+    {"id":"input-filter","source":"input","target":"filter"},
+    {"id":"filter-mapping","source":"filter","target":"mapping"},
+    {"id":"mapping-manual","source":"mapping","target":"manual","data":{"label":"Yes"}},
+    {"id":"mapping-infer","source":"mapping","target":"infer","data":{"label":"No"}},
+    {"id":"manual-coverage","source":"manual","target":"coverage"},
+    {"id":"infer-coverage","source":"infer","target":"coverage"},
+    {"id":"coverage-output","source":"coverage","target":"output"}
+  ]`}
+/>
+
+## Run the inventory
+
+```sh
+pnpm exec canvas-transcripts --input=/path/to/transcript-sources --output=/path/to/transcript-inventory --weeks=12
+```
+
+Optional metadata inputs:
+
+```sh
+pnpm exec canvas-transcripts --input=EXPORT_DIR --output=TRANSCRIPT_DIR --weeks=12 --mapping=source-map.json --expected=expected-meetings.json
+```
+
+The required input and output paths must resolve to different directories. Keep output separate from input. A child output folder is skipped while scanning; placing input inside output causes those files to be skipped. Paths are resolved from the command's current working directory.
+
+The command reads `.txt`, `.vtt`, and `.srt` files recursively. WebVTT and SRT files are candidates by extension. Plain-text files are included only when their path looks transcript-related or they have an explicit mapping entry. Matching names include transcript, caption, subtitle, lecture, recording, Zoom, Kaltura, and machine-transcribed.
+
+## Assign weeks
+
+A mapping entry with a positive week takes precedence. Without one, the tool looks for exactly one week number in the source-relative path or filename. Recognized patterns include:
+
+- Week 3, Week-03, or Week_3.
+- Wk 3 or W3.
+- Lecture 3 or Session 3.
+- A number before lecture, session, recording, transcript, or caption.
+
+If no pattern is found, the week is unresolved. If patterns point to multiple different weeks, the source is ambiguous. A single candidate outside the requested `--weeks` range is reported as outside the range and is not assigned. Week inference never reads transcript text.
+
+The manifest records the inference method (manual-mapping, path-pattern, or unresolved), candidate weeks, and source-relative path.
+
+## Add optional metadata
+
+===[Source mapping file]
+The mapping file can contain a top-level `sources` object or the path-keyed object directly. Prefer paths relative to the input directory so files with duplicate basenames remain distinguishable:
+
+```json
+{
+	"sources": {
+		"week-01/zoom-session-123.vtt": {
+			"week": 1,
+			"meetingTitle": "Week 1 lecture",
+			"meetingDate": "2026-03-02",
+			"platform": "Zoom",
+			"captureMethod": "manual-caption-copy",
+			"transcriptOrigin": "hosted captions",
+			"language": "en-AU",
+			"visibleVerification": "matched to the course recording page",
+			"captionStatus": "available",
+			"expectedIds": ["week-01-lecture"],
+			"recordingUrl": "https://video.example.edu/recordings/123"
+		}
+	}
+}
+```
+
+A mapping key can also be a filename. A unique basename match is accepted; if multiple mapped paths share that basename, the mapping remains ambiguous. Path matches take precedence.
+
+The report copies only week, meetingTitle, meetingDate, platform, captureMethod, transcriptOrigin, language, visibleVerification, captionStatus, expectedIds, and recordingUrl. Recording URLs are stored without credentials, query parameters, or fragments. Unknown mapping fields are omitted. Mapping filenames and SHA-256 hashes are recorded; the full mapping path is not.
+
+# Provenance is recorded only when platform and either captureMethod or transcriptOrigin are present. Otherwise it is incomplete-or-unknown. This describes supplied metadata completeness; it does not prove accuracy.
+
+## Check expected-meeting coverage
+
+===[Expected-meetings file]
+Use this optional file to report whether each known meeting has a matching transcript source:
+
+```json
+{
+	"meetings": [
+		{
+			"id": "week-01-lecture",
+			"week": 1,
+			"title": "Week 1 lecture",
+			"required": true,
+			"matchAny": ["lecture one", "session 1"],
+			"expectedIds": ["week-01-lecture"]
+		}
+	]
+}
+```
+
+Each meeting needs a non-empty id and a positive integer week. title and required are optional; required defaults to true. matchAny and expectedIds are optional arrays of strings.
+
+# Matching removes punctuation and spaces, lowercases text, then checks for a partial match in the source-relative path, filename, mapped meetingTitle, or mapped expectedIds. The meeting id, matchAny values, and expectedIds are all candidate tokens.
+
+Expected-meeting matching reports one of these statuses:
+
+| Status          | Meaning                                                         |
+| --------------- | --------------------------------------------------------------- |
+| found           | A matching source was assigned to the expected week.            |
+| wrong-week      | A matching source was assigned to another week.                 |
+| unassigned-week | A matching source exists, but its week could not be determined. |
+| missing         | No matching source was found.                                   |
+
+Required meetings without found status appear in `missingExpectedMeetings` and the relevant week's `missingExpectedIds`. Optional meetings remain in the per-week report but do not make a week partial.
+
+## Review the output
+
+The output directory receives `Week-01.txt` through the requested final week and `transcripts-manifest.json`. Existing files with those names are overwritten. Week files contain source paths, content hashes, week evidence, provenance status, approved metadata, and transcript text. Exact duplicate files within a week appear once in the combined text.
+
+The manifest retains an entry for every candidate source, including duplicates. It records:
+
+- Source-relative path, basename, format, byte count, and SHA-256.
+- Week assignment, inference method, and inferred candidates.
+- Approved metadata, provenance status, and how a mapping matched.
+- Unmatched sources, read errors, per-week counts, and duplicate sources.
+- Expected meetings, missing expected IDs, and required meetings not found.
+- Basenames and hashes of the optional mapping and expected-meetings files.
+
+A week is missing when no transcript was assigned, partial when transcripts exist but required meetings are missing, and found when transcripts exist and all required meetings were found. A found status does not prove that a transcript is complete, human-verified, or accurate.
+
+Exact duplicates are detected by SHA-256 within each week. Similar or paraphrased transcripts are not deduplicated. Resolve ambiguous weeks from source evidence, review each partial or missing week, preserve timestamps and speaker markers, and mark inaudible spans instead of guessing.
+
+Keep original transcripts unchanged and do not collect course material whose rules prohibit taking it out of Canvas. The command only inventories files already on disk.
+
+## Related documentation
+
+- [Transcript CLI options](/01-scraping/03-reference/03-command-line/#canvas-transcripts)
+- [Complete command-line reference](/01-scraping/03-reference/03-command-line/)
+- [Canvas export](/01-scraping/02-guides/03-canvas-export/) for the separate browser-based collector.
