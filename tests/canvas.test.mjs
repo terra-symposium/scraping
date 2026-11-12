@@ -25,16 +25,16 @@ import {
 
 /**
  * Builds an anchor-like Canvas DOM fixture used by serialized browser callbacks.
- * @param options - Anchor URL, optional title and text, module-row label, and dashboard-card title.
+ * @param o - Anchor URL, optional title and text, module-row label, and dashboard-card title.
  * @returns A minimal DOM-like anchor consumed by Canvas extraction callbacks.
  */
-function canvasAnchor(options) {
-	const { href, title = '', text = '', label = '', cardTitle = '' } = options;
+function canvasAnchor(o) {
+	const { href, title = '', text = '', label = '', cardTitle = '' } = o;
 	return {
 		href,
 		textContent: text,
-		querySelector: (selector) => (selector === '[data-testid="dashboard-card-title"]' && cardTitle ? { getAttribute: () => cardTitle } : null),
-		getAttribute: (name) => (name === 'title' ? title : name === 'aria-label' ? text : null),
+		querySelector: (s) => (s === '[data-testid="dashboard-card-title"]' && cardTitle ? { getAttribute: () => cardTitle } : null),
+		getAttribute: (n) => (n === 'title' ? title : n === 'aria-label' ? text : null),
 		closest: () => ({ textContent: label }),
 	};
 }
@@ -46,7 +46,7 @@ function canvasAnchor(options) {
  */
 function canvasModule(options) {
 	const { title, items } = options;
-	return { querySelector: (selector) => (selector === '.name' ? { textContent: title } : null), querySelectorAll: () => items.map(canvasAnchor) };
+	return { querySelector: (s) => (s === '.name' ? { textContent: title } : null), querySelectorAll: () => items.map(canvasAnchor) };
 }
 
 /**
@@ -60,25 +60,25 @@ function canvasPageFixture(options = {}) {
 	let moduleReady = false;
 	const page = {
 		url: () => pageUrl,
-		goto: async (url) => {
-			pageUrl = String(url);
+		goto: async (u) => {
+			pageUrl = String(u);
 			if (pageUrl.endsWith('/modules')) moduleReady = true;
 		},
 		waitForLoadState: async () => {},
-		waitForURL: async (predicate) => {
-			assert.equal(predicate(new URL(pageUrl)), true);
+		waitForURL: async (p) => {
+			assert.equal(p(new URL(pageUrl)), true);
 		},
 		waitForFunction: async () => {},
 		evaluate: async () => 'Canvas course page text',
-		locator: (selector) => {
+		locator: (s) => {
 			const locator = {
 				first: () => locator,
 				waitFor: async () => {},
-				isVisible: async () => (selector === '#context_modules' && moduleReady) || (selector.startsWith('.ic-DashboardCard__link') && dashboardReady),
+				isVisible: async () => (s === '#context_modules' && moduleReady) || (s.startsWith('.ic-DashboardCard__link') && dashboardReady),
 				evaluateAll: async (read) => {
-					if (selector === '.ic-DashboardCard__link[href]') return read(dashboardCourses);
-					if (selector === 'a[href]') return read(typeof courses === 'function' ? courses(pageUrl) : courses);
-					if (selector === '#context_modules .context_module') return read(modules);
+					if (s === '.ic-DashboardCard__link[href]') return read(dashboardCourses);
+					if (s === 'a[href]') return read(typeof courses === 'function' ? courses(pageUrl) : courses);
+					if (s === '#context_modules .context_module') return read(modules);
 					return read([]);
 				},
 				locator: (nestedSelector) => ({
@@ -90,6 +90,9 @@ function canvasPageFixture(options = {}) {
 	};
 	return {
 		page,
+		/** Current URL of the fixture page.
+		 * @return The page URL.
+		 */
 		get url() {
 			return pageUrl;
 		},

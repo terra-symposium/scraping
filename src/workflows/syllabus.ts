@@ -182,12 +182,12 @@ function ignoreSyllabusFailure(): undefined {
 /**
  * Compares syllabus archive entries by their stored paths.
  *
- * @param left - First archive entry.
- * @param right - Second archive entry.
+ * @param l - First archive entry.
+ * @param r - Second archive entry.
  * @return Locale comparison result for the entry names.
  */
-function compArchiveEntryNames(left: { entryName: string }, right: { entryName: string }): number {
-	return left.entryName.localeCompare(right.entryName);
+function compArchiveEntryNames(l: { entryName: string }, r: { entryName: string }): number {
+	return l.entryName.localeCompare(r.entryName);
 }
 
 /**

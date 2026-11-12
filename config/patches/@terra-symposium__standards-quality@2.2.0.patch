@@ -1,0 +1,13 @@
+diff --git a/dist/lib/runner.js b/dist/lib/runner.js
+index ad98c2267e0d7ce7c41185b8577ac71b6d894e71..bcb1111ad98602f4251d6c03a8310c47526e9824 100755
+--- a/dist/lib/runner.js
++++ b/dist/lib/runner.js
+@@ -716,7 +716,7 @@ function runTestSuite(cfg, check) {
+     const args = [...(check.args ?? [])];
+     const env = { ...process.env };
+     if (runner === 'node') {
+-        const reporterUrl = new URL('@terra-symposium/standards-quality-reports', import.meta.url).href;
++        const reporterUrl = new URL('./node-reporter.js', import.meta.url).href;
+         env.NODE_OPTIONS = qualityNodeReporterOptions(env.NODE_OPTIONS, reporterUrl);
+         env.TERRA_QUALITY_NODE_REPORTER_OWNER = '1';
+         args.splice(0, args.length, ...(function withoutNodeReporterArgs(args) {

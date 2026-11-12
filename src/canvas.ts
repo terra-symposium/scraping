@@ -57,10 +57,8 @@ export type ScrapeCanvasCourseOptions = {
 	log?: (message: string, failure?: boolean) => void;
 };
 
-/** One Canvas module resource before its type is classified. */
-type RawCanvasGroupItem = { title: string; url: string; label: string };
 /** Module heading and raw linked resources extracted from Canvas's DOM. */
-type RawCanvasGroup = { title: string; items: RawCanvasGroupItem[] };
+type RawCanvasGroup = { title: string; items: { title: string; url: string; label: string }[] };
 /** Visible anchor title and absolute URL read from a Canvas page. */
 type RawCanvasLink = { title: string; url: string };
 const TEXT_EXTS = new Set([

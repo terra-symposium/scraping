@@ -82,6 +82,7 @@
 	"security": {
 		"runtimeRoots": ["src/workflows/parallel.ts"]
 	},
+	"protectedIdentifiers": ["directory"],
 	"github": {
 		"repositories": ["Terra-Symposium/scraping"]
 	},

@@ -24,18 +24,23 @@ function resolvesWorkerOverrides() {
  * Verifies queue workers respect their limit and return failures in input order.
  */
 async function runsBoundedQueueWork() {
-	let activeWorkers = 0;
+	let aWorkers = 0;
 	let maximumWorkers = 0;
 	const completed = [];
+	/** Executes one queued fixture item and records its active interval.
+	 * @param item Queue item to execute.
+	 * @param index Original position in the queue.
+	 * @returns Resolves after the item completes or rejects with its expected failure.
+	 */
 	async function executeItem(item, index) {
-		activeWorkers++;
-		maximumWorkers = Math.max(maximumWorkers, activeWorkers);
+		aWorkers++;
+		maximumWorkers = Math.max(maximumWorkers, aWorkers);
 		try {
 			await delay(item === 1 ? 15 : 2);
 			if (item > 0) throw new Error(`item-${item}`);
 			completed.push(index);
 		} finally {
-			activeWorkers--;
+			aWorkers--;
 		}
 	}
 
@@ -48,12 +53,12 @@ async function runsBoundedQueueWork() {
 /**
  * Reads an input index from a queued worker failure.
  *
- * @param failure Queue failure to inspect.
+ * @param f Queue failure to inspect.
  *
  * @return Original input index.
  */
-function failureIndex(failure) {
-	return failure.index;
+function failureIndex(f) {
+	return f.index;
 }
 
 /**
@@ -98,11 +103,13 @@ test('workflow slots serialize acquisitions across processes', async () => {
 			await release();
 		}
 	`;
+	/** Starts a child process that acquires the shared workflow slot.
+	 * @param id Label written to the process event log.
+	 * @returns A promise that settles when the child process exits successfully.
+	 */
 	const runWorker = (id) =>
 		new Promise((resolve, reject) => {
-			const worker = spawn(process.execPath, ['--input-type=module', '--eval', source, lockDir, eventPath, id], {
-				stdio: 'ignore',
-			});
+			const worker = spawn(process.execPath, ['--input-type=module', '--eval', source, lockDir, eventPath, id], { stdio: 'ignore' });
 			worker.once('error', reject);
 			worker.once('exit', (code, signal) => {
 				if (code === 0) resolve(undefined);
@@ -111,17 +118,17 @@ test('workflow slots serialize acquisitions across processes', async () => {
 		});
 	try {
 		await Promise.all([runWorker('first'), runWorker('second')]);
-		const active = new Set();
+		const a = new Set();
 		for (const event of (await readFile(eventPath, 'utf8')).trim().split('\n')) {
 			const [op, id] = [event[0], event.slice(1)];
 			if (op === '+') {
-				assert.equal(active.size, 0, 'a second process entered while the workflow slot was occupied');
-				active.add(id);
+				assert.equal(a.size, 0, 'a second process entered while the workflow slot was occupied');
+				a.add(id);
 			} else {
-				assert.equal(active.delete(id), true, 'a process released a slot it did not own');
+				assert.equal(a.delete(id), true, 'a process released a slot it did not own');
 			}
 		}
-		assert.equal(active.size, 0);
+		assert.equal(a.size, 0);
 	} finally {
 		await rm(root, { recursive: true, force: true });
 	}

@@ -253,18 +253,24 @@ export async function authenticateWorkflow<T>(options: AuthenticateWorkflowOptio
 	let value!: T;
 
 	const createSession = options.createSession ?? createDefaultWorkflowSession;
-	/** Opens the consumer's app state in a new browser session using the selected headed mode. */
+	/** Opens the consumer's app state in a new browser session using the selected headed mode.
+	 * @param headed Whether Chromium should open visibly.
+	 */
 	async function open(headed: boolean): Promise<void> {
 		session = await createSession({ headed, storageStatePath });
 		value = await options.open(session.context);
 	}
 
-	/** Captures the current app state when a saved or newly signed-in session fails validation. */
+	/** Captures the current app state when a saved or newly signed-in session fails validation.
+	 * @param reason Explanation for the failed readiness check.
+	 */
 	async function captureFailure(reason: string): Promise<void> {
 		if (options.captureFailure) await options.captureFailure(value, reason);
 	}
 
-	/** Checks whether the current app-specific value represents an authenticated session. */
+	/** Checks whether the current app-specific value represents an authenticated session.
+	 * @returns Whether the app-specific value is ready.
+	 */
 	async function ready(): Promise<boolean> {
 		return options.isReady(value);
 	}
@@ -285,7 +291,9 @@ export async function authenticateWorkflow<T>(options: AuthenticateWorkflowOptio
 		const deadline = Date.now() + timeoutMs;
 		while (!(await ready())) {
 			if (Date.now() >= deadline) throw new Error(`Interactive authentication timed out after ${Math.ceil(timeoutMs / 60_000)} minutes.`);
-			/** Waits for the next bounded readiness poll of the interactive browser. */
+			/** Waits for the next bounded readiness poll of the interactive browser.
+			 * @param resolve Completes the readiness-poll delay.
+			 */
 			function waitForInteractivePoll(resolve: () => void): void {
 				setTimeout(resolve, Math.min(1_000, deadline - Date.now()));
 			}

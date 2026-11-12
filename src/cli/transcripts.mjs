@@ -123,22 +123,22 @@ function isRecord(value) {
 /**
  * Checks whether an expected-meeting record has the fields used by matching and reporting.
  *
- * @param {unknown} value - Candidate record parsed from the expected-meetings JSON.
+ * @param {unknown} v - Candidate record parsed from the expected-meetings JSON.
  * @return {value is ExpectedMeeting} Whether the record satisfies the inventory contract.
  */
-function isExpectedMeeting(value) {
+function isExpectedMeeting(v) {
 	if (
-		!isRecord(value) ||
-		typeof value.id !== 'string' ||
-		(typeof value.week !== 'number' && typeof value.week !== 'string') ||
-		!Number.isInteger(Number(value.week)) ||
-		Number(value.week) < 1 ||
-		(value.title !== undefined && typeof value.title !== 'string') ||
-		(value.required !== undefined && typeof value.required !== 'boolean')
+		!isRecord(v) ||
+		typeof v.id !== 'string' ||
+		(typeof v.week !== 'number' && typeof v.week !== 'string') ||
+		!Number.isInteger(Number(v.week)) ||
+		Number(v.week) < 1 ||
+		(v.title !== undefined && typeof v.title !== 'string') ||
+		(v.required !== undefined && typeof v.required !== 'boolean')
 	)
 		return false;
 	for (const key of ['matchAny', 'expectedIds']) {
-		if (value[key] !== undefined && !isStringArray(value[key])) return false;
+		if (v[key] !== undefined && !isStringArray(v[key])) return false;
 	}
 	return true;
 }
@@ -214,23 +214,23 @@ async function readJson(arg, label) {
 /**
  * Compares numeric week candidates in ascending order.
  *
- * @param {number} left - First candidate week.
- * @param {number} right - Second candidate week.
+ * @param {number} l - First candidate week.
+ * @param {number} r - Second candidate week.
  * @return {number} Negative, zero, or positive according to numeric order.
  */
-function compNumbers(left, right) {
-	return left - right;
+function compNumbers(l, r) {
+	return l - r;
 }
 
 /**
  * Compares transcript entries by their source-relative paths.
  *
- * @param {TranscriptEntry} left - First transcript entry.
- * @param {TranscriptEntry} right - Second transcript entry.
+ * @param {TranscriptEntry} l - First transcript entry.
+ * @param {TranscriptEntry} r - Second transcript entry.
  * @return {number} Locale comparison result for the source paths.
  */
-function compSourceEntries(left, right) {
-	return left.source.localeCompare(right.source);
+function compSourceEntries(l, r) {
+	return l.source.localeCompare(r.source);
 }
 
 /**

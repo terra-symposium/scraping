@@ -19,7 +19,7 @@
 		"build": "docs build --out dist/docs",
 		"preview": "docs preview --host 127.0.0.1 --port 2060",
 		"quality": "cd .. && ./config/node_modules/.bin/terra-quality quality --all --warn",
-		"quality:fix": "cd .. && ./config/node_modules/.bin/terra-quality quality --all --fix",
+		"quality:fix": "cd .. && ./config/node_modules/.bin/terra-quality quality --all",
 		"quality:check": "cd .. && ./config/node_modules/.bin/terra-quality quality --all --warn"
 	},
 	"devDependencies": {

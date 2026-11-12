@@ -42,13 +42,13 @@ test('syllabus archive normalization ignores support documents and selects deter
 test('syllabus normalization confines an overridden filename to the selected output directory', async () => {
 	const root = await mkdtemp(path.join(os.tmpdir(), 'scraping-syllabus-name-test-'));
 	const sourcePath = path.join(root, 'source.docx');
-	const outputDirectory = path.join(root, 'output');
+	const outputDir = path.join(root, 'output');
 	try {
 		await writeFile(sourcePath, 'word document');
-		const result = await normalizeSyllabusDocument(sourcePath, { outputDirectory, fileName: '../../Outside Report.docx' });
+		const result = await normalizeSyllabusDocument(sourcePath, { outputDirectory: outputDir, fileName: '../../Outside Report.docx' });
 
 		assert.equal(result.fileName, 'Outside Report.docx');
-		assert.equal(result.filePath, path.join(outputDirectory, 'Outside Report.docx'));
+		assert.equal(result.filePath, path.join(outputDir, 'Outside Report.docx'));
 		assert.equal(await readFile(result.filePath, 'utf8'), 'word document');
 		assert.equal(await readFile(sourcePath, 'utf8'), 'word document');
 	} finally {
@@ -113,6 +113,11 @@ test('NSW syllabus preparation fills the picker and selects every enabled checkb
 });
 
 test('syllabus readiness rejects login routes and sign-in pages', async () => {
+	/** Creates a page stub with a URL and visible body text.
+	 * @param url Page address returned by the stub.
+	 * @param text Visible body text returned by the stub.
+	 * @returns A minimal page implementation for readiness checks.
+	 */
 	const page = (url, text) => ({ url: () => url, locator: () => ({ isVisible: async () => true, innerText: async () => text }) });
 	assert.equal(await isAustralianSyllabusPageReady(page('https://example.edu/login', 'Public syllabus')), false);
 	assert.equal(await isAustralianSyllabusPageReady(page(AUSTRALIAN_SYLLABUS_SOURCES.QLD.url, 'Sign in to continue')), false);
@@ -122,7 +127,7 @@ test('syllabus readiness rejects login routes and sign-in pages', async () => {
 test('syllabus download completes interactive authentication and closes each session', async () => {
 	const root = await mkdtemp(path.join(os.tmpdir(), 'terra-syllabus-workflow-'));
 	const storageStatePath = path.join(root, 'state.json');
-	const outputDirectory = path.join(root, 'output');
+	const outputDir = path.join(root, 'output');
 	const headedModes = [];
 	const closedModes = [];
 	let storedAuthentication = false;
@@ -131,7 +136,7 @@ test('syllabus download completes interactive authentication and closes each ses
 		const result = await fetchAustralianSyllabus({
 			state: 'QLD',
 			storageStatePath,
-			outputDirectory,
+			outputDirectory: outputDir,
 			interactive: true,
 			timeoutMs: 1_000,
 			onInteractiveStart: () => interactiveStarts++,
@@ -140,9 +145,15 @@ test('syllabus download completes interactive authentication and closes each ses
 				assert.equal(requestedStatePath, storageStatePath);
 				const page = {
 					currentUrl: 'about:blank',
+					/** Current page address.
+					 * @return The current address.
+					 */
 					url() {
 						return this.currentUrl;
 					},
+					/** Navigates the stub to a requested curriculum URL.
+					 * @param url Destination page address.
+					 */
 					async goto(url) {
 						this.currentUrl = !headed && !storedAuthentication ? 'https://curriculum.example/login' : url;
 					},
@@ -195,9 +206,15 @@ test('syllabus download fails clearly and closes its session when authentication
 				createSession: async () => {
 					const page = {
 						currentUrl: 'about:blank',
+						/** Current page address.
+						 * @return The current address.
+						 */
 						url() {
 							return this.currentUrl;
 						},
+						/** Navigates the stub to the sign-in page.
+						 * @param url Destination page address.
+						 */
 						async goto() {
 							this.currentUrl = 'https://curriculum.example/login';
 						},

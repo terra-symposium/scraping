@@ -137,13 +137,13 @@ async function drainQueue<T>(items: readonly T[], execute: (item: T, index: numb
 /**
  * Orders queue failures by the input position that produced them.
  *
- * @param left First failure to compare.
- * @param right Second failure to compare.
+ * @param l First failure to compare.
+ * @param r Second failure to compare.
  *
  * @return Negative, zero, or positive order result for `Array.sort`.
  */
-function compFailureIndex<T>(left: QueueFailure<T>, right: QueueFailure<T>): number {
-	return left.index - right.index;
+function compFailureIndex<T>(l: QueueFailure<T>, r: QueueFailure<T>): number {
+	return l.index - r.index;
 }
 
 /**

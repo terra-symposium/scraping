@@ -2,3 +2,5 @@ allowBuilds:
   '@carbon/icon-helpers': true
   '@carbon/icons-react': true
   esbuild: true
+patchedDependencies:
+  '@terra-symposium/standards-quality@2.2.0': patches/@terra-symposium__standards-quality@2.2.0.patch
