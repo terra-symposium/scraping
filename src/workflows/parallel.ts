@@ -51,6 +51,13 @@ export type WorkflowSlotOptions = {
 HELPERS
 //////////////////////////////////////////////////*/
 
+/**
+ * Parses a positive integer override without accepting empty, fractional, or unsafe values.
+ *
+ * @param value Raw command-line or environment value.
+ *
+ * @return Parsed positive integer, or `undefined` when the value is invalid.
+ */
 function positiveInt(value: string | undefined): number | undefined {
 	if (!value || !/^\d+$/.test(value)) return undefined;
 	const parsed = Number(value);
@@ -72,9 +79,15 @@ function positiveInt(value: string | undefined): number | undefined {
 export function resolveWorkerCount(fallback = 5, domain?: string, options: ResolveWorkerCountOptions = {}): number {
 	const argv = options.argv || process.argv;
 	const env = options.env || process.env;
-	const flagIndex = argv.findIndex((argument) => argument === '--workers');
+	let flagIndex = -1;
+	let inlineWorkerValue: string | undefined;
+	for (let index = 0; index < argv.length; index++) {
+		const argument = argv[index];
+		if (flagIndex < 0 && argument === '--workers') flagIndex = index;
+		if (inlineWorkerValue === undefined && argument.startsWith('--workers=')) inlineWorkerValue = argument.slice('--workers='.length);
+	}
 	return (
-		positiveInt(argv.find((argument) => argument.startsWith('--workers='))?.slice('--workers='.length)) ||
+		positiveInt(inlineWorkerValue) ||
 		positiveInt(flagIndex >= 0 ? argv[flagIndex + 1] : undefined) ||
 		(domain ? positiveInt(env[`PW_${domain.toUpperCase()}_WORKERS`]) : undefined) ||
 		(argv.includes('--headed') ? positiveInt(env.PW_HEADED_WORKERS) : undefined) ||
@@ -95,20 +108,42 @@ export function resolveWorkerCount(fallback = 5, domain?: string, options: Resol
  */
 export async function runQueued<T>(items: readonly T[], workerCount: number, execute: (item: T, index: number) => Promise<void>): Promise<QueueFailure<T>[]> {
 	const failures: QueueFailure<T>[] = [];
-	let cursor = 0;
-	await Promise.all(
-		Array.from({ length: Math.min(items.length, Number.isFinite(workerCount) ? Math.max(1, Math.floor(workerCount)) : 1) }, async () => {
-			while (cursor < items.length) {
-				const index = cursor++;
-				try {
-					await execute(items[index], index);
-				} catch (err) {
-					failures.push({ error: err, index, item: items[index] });
-				}
-			}
-		}),
-	);
-	return failures.sort((left, right) => left.index - right.index);
+	const state = { cursor: 0, failures };
+	const workerLimit = Math.min(items.length, Number.isFinite(workerCount) ? Math.max(1, Math.floor(workerCount)) : 1);
+	const workers: Promise<void>[] = [];
+	for (let workerIndex = 0; workerIndex < workerLimit; workerIndex++) workers.push(drainQueue(items, execute, state));
+	await Promise.all(workers);
+	return failures.sort(compFailureIndex);
+}
+
+/**
+ * Processes queue items claimed from a shared cursor until no work remains.
+ *
+ * @param items Values to process in original order.
+ * @param execute Operation run for each item and its input index.
+ * @param state Shared cursor and failure collection for concurrent workers.
+ */
+async function drainQueue<T>(items: readonly T[], execute: (item: T, index: number) => Promise<void>, state: { cursor: number; failures: QueueFailure<T>[] }): Promise<void> {
+	while (state.cursor < items.length) {
+		const index = state.cursor++;
+		try {
+			await execute(items[index], index);
+		} catch (err) {
+			state.failures.push({ error: err, index, item: items[index] });
+		}
+	}
+}
+
+/**
+ * Orders queue failures by the input position that produced them.
+ *
+ * @param left First failure to compare.
+ * @param right Second failure to compare.
+ *
+ * @return Negative, zero, or positive order result for `Array.sort`.
+ */
+function compFailureIndex<T>(left: QueueFailure<T>, right: QueueFailure<T>): number {
+	return left.index - right.index;
 }
 
 /**
@@ -133,7 +168,11 @@ export async function acquireWorkflowSlot(options: WorkflowSlotOptions): Promise
 			),
 	);
 	await mkdir(dir, { recursive: true, mode: 0o700 });
-	await chmod(dir, 0o700).catch(() => undefined);
+	try {
+		await chmod(dir, 0o700);
+	} catch {
+		// The lock directory remains usable when the platform does not support chmod.
+	}
 	while (true) {
 		if (options.signal?.aborted) throw options.signal.reason || new Error('Workflow slot acquisition was aborted.');
 		for (let index = 0; index < options.size; index++) {
@@ -143,17 +182,26 @@ export async function acquireWorkflowSlot(options: WorkflowSlotOptions): Promise
 				await handle.writeFile(`${process.pid}\n`);
 				await handle.close();
 				let released = false;
-				return async () => {
+				/**
+				 * Removes the lock file once, releasing this workflow slot.
+				 */
+				async function releaseSlot(): Promise<void> {
 					if (released) return;
 					released = true;
 					await rm(filePath, { force: true });
-				};
+				}
+				return releaseSlot;
 			} catch (cause) {
 				if (typeof cause !== 'object' || !cause || !('code' in cause) || cause.code !== 'EEXIST') throw cause;
-				const pid = Number((await readFile(filePath, 'utf8').catch(() => '')).trim());
-				if (!Number.isSafeInteger(pid) || pid <= 0) {
-					await rm(filePath, { force: true });
-				} else {
+				let lockContents = '';
+				try {
+					lockContents = await readFile(filePath, 'utf8');
+				} catch {
+					// The competing process may have released the lock between open and read.
+				}
+				const pid = Number(lockContents.trim());
+				if (!Number.isSafeInteger(pid) || pid <= 0) await rm(filePath, { force: true });
+				else {
 					try {
 						process.kill(pid, 0);
 					} catch (lockErr) {

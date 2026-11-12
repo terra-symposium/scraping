@@ -1,0 +1,143 @@
+---
+title: Browser sessions and authentication
+description: Configure headed or headless Chromium, reuse private state, and run application-specific sign-in checks.
+---
+
+The browser helpers centralize Chromium launch, Playwright storage-state reuse, optional visible sign-in, and cleanup. Each workflow supplies its own page setup and readiness check because Canvas, Gemini, Sanity, and public curriculum pages have different requirements.
+
+## Authentication lifecycle
+
+`headed` selects the requested browser mode. `interactive` controls whether a visible browser may repair an unreadable saved session. The helper saves state after readiness succeeds and returns an open session to its caller.
+
+<Nodes
+	direction="TB"
+	height={600}
+	nodes={`[
+    {"id":"open","type":"origin","data":{"title":"Open requested browser mode"}},
+    {"id":"ready","type":"decision","data":{"title":"Does isReady pass?"}},
+    {"id":"return","type":"terminal","data":{"title":"Save state and return session"}},
+    {"id":"interactive","type":"decision","data":{"title":"Is interactive enabled?"}},
+    {"id":"throw","type":"terminal","data":{"title":"Close session and throw"}},
+    {"id":"signin","type":"process","data":{"title":"Open visible browser; finish sign-in"}},
+    {"id":"headed","type":"decision","data":{"title":"Was headed requested?"}},
+    {"id":"visible","type":"terminal","data":{"title":"Keep and return visible session"}},
+    {"id":"verify","type":"terminal","data":{"title":"Reopen headless; verify or throw"}}
+  ]`}
+	edges={`[
+    {"id":"open-ready","source":"open","target":"ready"},
+    {"id":"ready-return","source":"ready","target":"return","data":{"label":"Yes"}},
+    {"id":"ready-interactive","source":"ready","target":"interactive","data":{"label":"No"}},
+    {"id":"interactive-throw","source":"interactive","target":"throw","data":{"label":"No"}},
+    {"id":"interactive-signin","source":"interactive","target":"signin","data":{"label":"Yes"}},
+    {"id":"signin-headed","source":"signin","target":"headed"},
+    {"id":"headed-visible","source":"headed","target":"visible","data":{"label":"Yes"}},
+    {"id":"headed-verify","source":"headed","target":"verify","data":{"label":"No"}}
+  ]`}
+/>
+
+|||[Headless automation]
+Set `headed: false` and leave `interactive` false (the default) to reuse saved state without opening a window. If the app is not ready, the helper closes the session and throws.
+|||
+
+|||[Headless with sign-in recovery]
+Set `headed: false` and `interactive: true`. The helper tries headlessly first. If readiness fails, it opens a visible browser for sign-in, saves state, closes that browser, then launches and verifies a fresh headless session.
+|||
+
+|||[Visible session]
+Set `headed: true`. `interactive` defaults to true, so a visible session can wait for sign-in and remains open when returned. Set `interactive: false` to require existing state; an unreadable session then closes and throws.
+|||
+
+The default interactive-authentication timeout is 15 minutes. Readiness is polled at intervals of up to one second. `onInteractiveStart` runs just before the user must finish sign-in.
+
+## Create a temporary browser session
+
+Use `launchWorkflowSession` for direct control of the browser lifetime, or `withWorkflowSession` when a callback should own cleanup:
+
+```ts
+import { withWorkflowSession } from '@terra-symposium/scraping';
+
+const titles = await withWorkflowSession({ headed: false, storageStatePath: '/secure/path/session.json' }, async ({ context }) => {
+	const page = await context.newPage();
+	await page.goto('https://example.edu');
+	return page.locator('h1').allTextContents();
+});
+```
+
+The default is headless Chromium. `headed: true` displays the window. Downloads are enabled by default. A supplied `storageStatePath` is loaded only when the file exists; `launchWorkflowSession` does not save updated state. Close a returned session in `finally`.
+
+## Authenticate with an application readiness check
+
+Use `authenticateWorkflow` when the consumer can tell whether the application is ready:
+
+```ts
+import { authenticateWorkflow } from '@terra-symposium/scraping';
+
+const session = await authenticateWorkflow({
+	sessionName: 'course-notes',
+	headed: false,
+	interactive: true,
+	open: async (context) => {
+		const page = await context.newPage();
+		await page.goto('https://example.edu/courses');
+		return page;
+	},
+	isReady: async (page) =>
+		page
+			.locator('[data-course-list]')
+			.isVisible()
+			.catch(() => false),
+	onInteractiveStart: () => console.log('Sign in in the visible browser.'),
+});
+
+try {
+	console.log(await session.value.title());
+} finally {
+	await session.close();
+}
+```
+
+`open` returns the value checked by `isReady`. The readiness callback must return true only when the workflow can safely continue. The returned session includes that value, its browser and context, an async `close()` function, and the absolute `storageStatePath`.
+
+If the initial check fails, `captureFailure` runs when supplied. With interactive sign-in disabled, the helper closes the session and throws `authenticationRequiredMessage` or its default error. If verification after a headless sign-in fails, or a callback throws, the active session is closed before the error is rethrown. The caller must close every successfully returned session.
+
+## Browser launch options
+
+| Option             | Effect                                                                      |
+| ------------------ | --------------------------------------------------------------------------- |
+| `headed`           | Show Chromium when true; false by default.                                  |
+| `storageStatePath` | Load an existing Playwright state file. The launch helper does not save it. |
+| `userDataDir`      | Use a persistent profile. Do not open it in concurrent Chromium processes.  |
+| `channel`          | Select a Playwright browser channel, such as Chrome.                        |
+| `executablePath`   | Select a specific Chromium executable.                                      |
+| `args`             | Add Chromium command-line arguments.                                        |
+| `acceptDownloads`  | Enable download events; true by default.                                    |
+
+If `userDataDir` is set, the helper launches a persistent browser context. `closeWorkflowSession` accepts either the returned session or a compatible browser/context pair and closes it safely.
+
+## Saved state and privacy
+
+Authentication state can contain live credentials or session tokens. Keep it private and out of Git, shared backups, and exported course data. Use a separate `sessionName` for each service or account. The helper creates the state directory and restricts the directory and saved file to the owner where supported.
+
+===[Default storage-state paths]
+When `storageStatePath` is omitted, the helper sanitizes `sessionName` and uses an OS-level path outside the repository:
+
+- macOS: `~/Library/Application Support/Terra Symposium/Workflows/session-name/storage-state.json`
+- Other platforms: `~/.config/terra-symposium/workflows/session-name/storage-state.json`
+
+# Supply an explicit `storageStatePath` when an application manages state elsewhere.
+
+## Custom browser factories
+
+Pass `createSession` to `authenticateWorkflow`, `scrapeCanvas`, or `fetchAustralianSyllabus` when a consumer needs its own browser channel or session factory. It receives the requested `headed` value and absolute state path, and must return a `WorkflowBrowserSession` with a working `close` callback. The workflow saves that context's state after readiness succeeds and closes the session when collection finishes.
+
+Website can use this hook to keep its Chrome channel or persistent-profile selection. Service-specific selectors, account checks, and screenshots stay in the owning application.
+
+## Authentication boundary
+
+The shared helpers do not guess that a page is signed in. Consumers provide `open` and `isReady` callbacks for their own service. The Canvas command checks for Canvas course or module content; the syllabus workflow checks for a readable public curriculum page. Website retains its stricter Gemini, Sanity, and product-specific checks.
+
+These Playwright helpers support a user's own local workflow. Do not use them as an agent route for accessing Canvas; agent-led collection must follow the owning product's approved in-app browser workflow.
+
+## API reference
+
+See [browser API types and signatures](/01-scraping/03-reference/02-workflows/#browser-session-api) for all option fields and function contracts.

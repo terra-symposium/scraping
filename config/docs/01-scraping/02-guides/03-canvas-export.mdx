@@ -1,0 +1,160 @@
+---
+title: Canvas export
+description: Capture visible Canvas courses and module content into private local files.
+---
+
+The Canvas workflow discovers courses and module groups visible to a signed-in user, reads Canvas page text, downloads linked Canvas files, and writes a local manifest and log. It does not publish content or read grades, submissions, rosters, or private messages.
+
+## Collection flow
+
+<Nodes
+	direction="TB"
+	height={560}
+	nodes={`[
+    {"id":"url","type":"origin","data":{"title":"Start with a Canvas URL"}},
+    {"id":"course","type":"decision","data":{"title":"Is it a course URL?"}},
+    {"id":"direct","type":"process","data":{"title":"Export that course"}},
+    {"id":"list","type":"process","data":{"title":"Discover visible courses"}},
+    {"id":"filter","type":"process","data":{"title":"Apply title filter or --all-courses"}},
+    {"id":"modules","type":"process","data":{"title":"Select matching module groups"}},
+    {"id":"resources","type":"process","data":{"title":"Read pages; download Canvas files"}},
+    {"id":"output","type":"terminal","data":{"title":"Write local files, manifest, and log"}}
+  ]`}
+	edges={`[
+    {"id":"url-course","source":"url","target":"course"},
+    {"id":"course-direct","source":"course","target":"direct","data":{"label":"Yes"}},
+    {"id":"course-list","source":"course","target":"list","data":{"label":"No"}},
+    {"id":"list-filter","source":"list","target":"filter"},
+    {"id":"direct-modules","source":"direct","target":"modules"},
+    {"id":"filter-modules","source":"filter","target":"modules"},
+    {"id":"modules-resources","source":"modules","target":"resources"},
+    {"id":"resources-output","source":"resources","target":"output"}
+  ]`}
+/>
+
+## Install and start a run
+
+Install a reviewed Git tag and Playwright Chromium in the consuming repository:
+
+```sh
+pnpm add 'github:Terra-Symposium/scraping#v0.2.0'
+pnpm exec playwright install chromium
+```
+
+|||[Command line]
+
+```sh
+pnpm exec canvas-export --canvas-url=https://canvas.example.edu/dashboard --headed --groups="Week 1,Week 2"
+```
+
+The default output is `~/Downloads/canvas-export`. Use `--output=PATH` to change it. `--groups` accepts comma-separated, case-insensitive title fragments; any fragment may match. Use `--all-courses` to include every visible course. The [Canvas CLI reference](/01-scraping/03-reference/03-command-line/#canvas-export) lists every option.
+|||
+
+|||[TypeScript API]
+Use `scrapeCanvas` for the complete workflow when the package should own authentication, file paths, manifests, logging, and browser cleanup:
+
+```ts
+import { scrapeCanvas } from '@terra-symposium/scraping/canvas';
+
+const result = await scrapeCanvas({
+	canvasUrl: 'https://canvas.example.edu/dashboard',
+	groupMatches: ['Week 1', 'Week 2'],
+	headed: true,
+	interactive: true,
+});
+
+console.log(result.output, result.manifest);
+```
+
+The [Canvas API reference](/01-scraping/03-reference/01-canvas/) documents all options and return fields.
+|||
+
+## Course and module selection
+
+A direct course URL is exported by itself. For a dashboard or course list, the default filter keeps course titles containing a named season and year or a semester/term number and year. Set `includeAllCourses: true` or `--all-courses` to include all visible courses.
+
+All module groups are selected by default. If a group filter is supplied, a group is included when its title contains any case-insensitive fragment. A course URL is normalized to its `/modules` route before group discovery.
+
+## Headed sign-in and saved state
+
+The command is headless by default. Use `--headed` to open Chromium for the normal Canvas sign-in flow. The command waits for visible course or module content, saves Playwright state outside the repository, and reuses it on later runs.
+
+The default state file is under the user's OS application-support workflow directory, in the Canvas subdirectory. Use `--storage-state=PATH` to select another file. The state file can contain live credentials; keep it private and out of Git.
+
+The CLI accepts `--interactive` as an alias for `--headed`. Either flag displays Chromium and permits interactive sign-in.
+
+## Use the lower-level library functions
+
+Use the lower-level functions when the consumer needs to compose discovery and collection with its own browser lifecycle:
+
+```ts
+import { authenticateWorkflow, discoverCanvasCourses, scrapeCanvasCourse } from '@terra-symposium/scraping';
+
+const session = await authenticateWorkflow({
+	sessionName: 'canvas',
+	headed: true,
+	interactive: true,
+	open: async (context) => {
+		const page = await context.newPage();
+		await page.goto('https://canvas.example.edu/dashboard');
+		return page;
+	},
+	isReady: async (page) =>
+		page
+			.locator('#context_modules, .ic-DashboardCard__link')
+			.first()
+			.isVisible()
+			.catch(() => false),
+});
+
+try {
+	const courses = await discoverCanvasCourses(session.value, 'https://canvas.example.edu/dashboard');
+	const first = courses[0];
+	if (first) {
+		await scrapeCanvasCourse({
+			page: session.value,
+			request: session.context.request,
+			course: first,
+			output: '/tmp/canvas-export',
+			groupMatches: ['Week 1'],
+		});
+	}
+} finally {
+	await session.close();
+}
+```
+
+Pass the `Page` and `APIRequestContext` from the same authenticated `BrowserContext`. Lower-level discovery and scrape functions do not own or close the browser. `scrapeCanvasCourse` visits a course's module page and processes selected groups sequentially.
+
+## Output files and failure handling
+
+```text
+<output>/
+  manifest.json
+  canvas-export.log
+  <course-name>/
+    <module-name>/
+      <module-name>.txt
+      <file-id>-<safe-file-name>
+```
+
+The exporter uses Unicode-normalized lowercase slugs for course and module folders. Each module text file contains page titles, sanitized Canvas URLs, and readable page text. Direct and page-linked Canvas files are downloaded through the authenticated request context. External links are recorded in the group's `links` array and are not fetched. Duplicate course-file URLs are downloaded once within each group.
+
+The manifest records the sanitized source URL, selected course and group summaries, saved files, page text, external links, and item-level errors. The log contains progress and failures with credentials, query strings, and fragments removed.
+
+A failed resource is recorded and logged; later items continue. Top-level failures such as an invalid URL, failed authentication, or no matching courses throw an error. The package writes the sanitized log even after a top-level failure and always closes a browser session it owns. The complete behavior is described in the [Canvas API reference](/01-scraping/03-reference/01-canvas/#complete-export-behavior).
+
+:::note[Review course access]
+
+Canvas collection reads courses and module resources visible to the signed-in account. Review course rules before including material. Keep exports private and outside Git, and verify downloaded files before using them.
+
+:::
+
+Uni Notes owns Markdown formatting and review. Website owns its separate generation and publishing logic. The shared package does not decide whether captured material becomes a note.
+
+## Related documentation
+
+- [Canvas API reference](/01-scraping/03-reference/01-canvas/)
+- [Canvas CLI options](/01-scraping/03-reference/03-command-line/#canvas-export)
+- [Browser sessions and authentication](/01-scraping/02-guides/01-browser-sessions/)
+- [Consumer integration](/01-scraping/01-getting-started/01-overview/)

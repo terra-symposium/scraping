@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/**
+/*
  * Inventory locally collected Canvas/Zoom/Kaltura transcripts by course week.
  * This helper never opens a browser, fetches remote content, or changes Docs.
  */
@@ -31,26 +31,32 @@ TYPES
 CONFIG
 //////////////////////////////////////////////////*/
 
-/**
- * Reads one named command-line option from the process arguments.
- *
- * @param {string} name - Option name without its leading dashes.
- *
- * @return {string|undefined} Option value when the caller supplied it.
- */
 const args = process.argv.slice(2);
 if (args.includes('--help') || args.includes('-h')) {
 	console.log('Usage: canvas-transcripts --input=EXPORT_DIR --output=TRANSCRIPT_DIR [--weeks=12] [--mapping=SOURCE_MAP.json] [--expected=EXPECTED_MEETINGS.json]');
 	process.exit(0);
 }
-const value = (name) => args.find((arg) => arg.startsWith(`--${name}=`))?.slice(name.length + 3);
-const inputArg = value('input');
-const outputArg = value('output');
-const weeks = Number(value('weeks') || 12);
+/**
+ * Reads the value of a command-line option without consuming the process arguments.
+ *
+ * @param {string} name - Option name without its leading dashes.
+ * @return {string|undefined} The first matching option value, if supplied.
+ */
+function getOptionValue(name) {
+	const prefix = `--${name}=`;
+	for (const arg of args) {
+		if (arg.startsWith(prefix)) return arg.slice(prefix.length);
+	}
+	return undefined;
+}
+
+const inputArg = getOptionValue('input');
+const outputArg = getOptionValue('output');
+const weeks = Number(getOptionValue('weeks') || 12);
 const inputRoot = path.resolve(inputArg || '.');
 const outputRoot = path.resolve(outputArg || '.');
-const mappingArg = value('mapping');
-const expectedArg = value('expected');
+const mappingArg = getOptionValue('mapping');
+const expectedArg = getOptionValue('expected');
 /** Transcript records collected from valid source files.
  * @type {TranscriptEntry[]} - Sorted before writing the final week manifest.
  */
@@ -77,22 +83,7 @@ const mappingByPath = new Map();
 const mappingByBaseName = new Map();
 const expectedInput = await readJson(expectedArg, 'expected-meetings');
 const expectedMeetings = /** @type {unknown[]} */ ((isRecord(expectedInput.value) && expectedInput.value.meetings) || []);
-if (
-	!Array.isArray(expectedMeetings) ||
-	!expectedMeetings.every(
-		(meeting) =>
-			isRecord(meeting) &&
-			typeof meeting.id === 'string' &&
-			(typeof meeting.week === 'number' || typeof meeting.week === 'string') &&
-			Number.isInteger(Number(meeting.week)) &&
-			Number(meeting.week) >= 1 &&
-			(meeting.title === undefined || typeof meeting.title === 'string') &&
-			(meeting.required === undefined || typeof meeting.required === 'boolean') &&
-			['matchAny', 'expectedIds'].every((key) => meeting[key] === undefined || (Array.isArray(meeting[key]) && meeting[key].every((i) => typeof i === 'string'))),
-	)
-) {
-	throw new Error('Expected-meetings JSON must contain valid meeting records.');
-}
+if (!Array.isArray(expectedMeetings) || !expectedMeetings.every(isExpectedMeeting)) throw new Error('Expected-meetings JSON must contain valid meeting records.');
 /** Transcript entries grouped by their resolved week number.
  * @type {Map<number, TranscriptEntry[]>} - Unresolved sources remain in diagnostics only.
  */
@@ -127,6 +118,43 @@ HELPERS
  */
 function isRecord(value) {
 	return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Checks whether an expected-meeting record has the fields used by matching and reporting.
+ *
+ * @param {unknown} value - Candidate record parsed from the expected-meetings JSON.
+ * @return {value is ExpectedMeeting} Whether the record satisfies the inventory contract.
+ */
+function isExpectedMeeting(value) {
+	if (
+		!isRecord(value) ||
+		typeof value.id !== 'string' ||
+		(typeof value.week !== 'number' && typeof value.week !== 'string') ||
+		!Number.isInteger(Number(value.week)) ||
+		Number(value.week) < 1 ||
+		(value.title !== undefined && typeof value.title !== 'string') ||
+		(value.required !== undefined && typeof value.required !== 'boolean')
+	)
+		return false;
+	for (const key of ['matchAny', 'expectedIds']) {
+		if (value[key] !== undefined && !isStringArray(value[key])) return false;
+	}
+	return true;
+}
+
+/**
+ * Checks whether every member of a JSON value is a string.
+ *
+ * @param {unknown} value - Candidate array from parsed metadata.
+ * @return {value is string[]} Whether the value is a string array.
+ */
+function isStringArray(value) {
+	if (!Array.isArray(value)) return false;
+	for (const item of value) {
+		if (typeof item !== 'string') return false;
+	}
+	return true;
 }
 
 /**
@@ -183,6 +211,191 @@ async function readJson(arg, label) {
 	}
 }
 
+/**
+ * Compares numeric week candidates in ascending order.
+ *
+ * @param {number} left - First candidate week.
+ * @param {number} right - Second candidate week.
+ * @return {number} Negative, zero, or positive according to numeric order.
+ */
+function compNumbers(left, right) {
+	return left - right;
+}
+
+/**
+ * Compares transcript entries by their source-relative paths.
+ *
+ * @param {TranscriptEntry} left - First transcript entry.
+ * @param {TranscriptEntry} right - Second transcript entry.
+ * @return {number} Locale comparison result for the source paths.
+ */
+function compSourceEntries(left, right) {
+	return left.source.localeCompare(right.source);
+}
+
+/**
+ * Builds expected-meeting status by matching configured identifiers against collected transcripts.
+ *
+ * @param {unknown} rawMeeting - Validated expected-meeting object from configuration.
+ * @return {object} Status and matched source details for the requested meeting.
+ */
+function createExpectedMeetingReport(rawMeeting) {
+	const meeting = /** @type {ExpectedMeeting} */ (rawMeeting);
+	const week = Number(meeting.week);
+	const matched = [];
+	for (const entry of entries) {
+		if (entryMatchesMeeting(entry, meeting)) matched.push(entry);
+	}
+	let foundInExpectedWeek = false;
+	let foundInAnotherWeek = false;
+	for (const entry of matched) {
+		if (entry.week === week) foundInExpectedWeek = true;
+		if (Number.isInteger(entry.week) && entry.week !== week) foundInAnotherWeek = true;
+	}
+	let status = 'missing';
+	if (foundInExpectedWeek) status = 'found';
+	else if (foundInAnotherWeek) status = 'wrong-week';
+	else if (matched.length) status = 'unassigned-week';
+	const matchedSources = [];
+	for (const entry of matched) matchedSources.push(toMatchedSource(entry));
+	return { id: meeting.id, week, title: meeting.title || meeting.id, required: meeting.required !== false, status, matchedSources };
+}
+
+/**
+ * Checks the transcript names and metadata that an expected-meeting record declares as matches.
+ *
+ * @param {TranscriptEntry} entry - Collected transcript candidate.
+ * @param {ExpectedMeeting} meeting - Expected meeting to match.
+ * @return {boolean} Whether any configured token occurs in any transcript identifier.
+ */
+function entryMatchesMeeting(entry, meeting) {
+	const configuredIds = [];
+	if (Array.isArray(meeting.matchAny)) configuredIds.push(...meeting.matchAny);
+	if (Array.isArray(meeting.expectedIds)) configuredIds.push(...meeting.expectedIds);
+	configuredIds.push(meeting.id);
+	const tokens = [];
+	for (const configuredId of configuredIds) {
+		const token = normMatch(configuredId);
+		if (token) tokens.push(token);
+	}
+	const candidateValues = [entry.source, entry.name, entry.metadata.meetingTitle];
+	if (isStringArray(entry.metadata.expectedIds)) candidateValues.push(...entry.metadata.expectedIds);
+	for (const candidateValue of candidateValues) {
+		if (!candidateValue) continue;
+		const candidateMatchText = normMatch(candidateValue);
+		for (const token of tokens) {
+			if (candidateMatchText.includes(token)) return true;
+		}
+	}
+	return false;
+}
+
+/**
+ * Converts a transcript entry into the source reference stored in expected-meeting reports.
+ *
+ * @param {TranscriptEntry} entry - Matched transcript candidate.
+ * @return {{source: string, week: number|null, sha256: string}} Compact source provenance.
+ */
+function toMatchedSource(entry) {
+	return { source: entry.source, week: entry.week ?? null, sha256: entry.sha256 };
+}
+
+/**
+ * Selects report fields and names the transcript extension as its output format.
+ *
+ * @param {TranscriptEntry} entry - Collected transcript details.
+ * @return {object} Public fields written into one week report.
+ */
+function toReportFile(entry) {
+	return {
+		name: entry.name,
+		source: entry.source,
+		sha256: entry.sha256,
+		bytes: entry.bytes,
+		format: entry.extension.slice(1),
+		weekEvidence: { method: entry.weekMethod, candidates: entry.inferredWeeks },
+		provenanceStatus: entry.provenanceStatus,
+		metadata: entry.metadata,
+		mappingMatch: entry.mappingMatch,
+	};
+}
+
+/**
+ * Renders the unique transcript records assigned to one week, including their provenance headers.
+ *
+ * @param {TranscriptEntry[]} unique - Deduplicated transcript records for the week.
+ * @param {number} week - Week number being written.
+ * @return {string} Plain-text contents for the week file.
+ */
+function renderWeekBody(unique, week) {
+	if (!unique.length)
+		return `No transcript file was assigned to Week ${String(week).padStart(2, '0')} in this run. See transcripts-manifest.json for unresolved files, expected meetings, and capture gaps.`;
+	const rendered = [];
+	for (const entry of unique) rendered.push(renderTranscript(entry));
+	return rendered.join('\n\n---\n\n');
+}
+
+/**
+ * Formats a transcript and its approved provenance as one plain-text section.
+ *
+ * @param {TranscriptEntry} entry - Transcript contents and metadata.
+ * @return {string} Transcript section with source, digest, week evidence, and provenance.
+ */
+function renderTranscript(entry) {
+	const metadataLines = [];
+	for (const [key, value] of Object.entries(entry.metadata)) metadataLines.push(fmtMetadataField(key, value));
+	const header = [
+		`Source: ${entry.source}`,
+		`SHA-256: ${entry.sha256}`,
+		`Week evidence: ${entry.weekMethod}${entry.inferredWeeks.length ? ` (${entry.inferredWeeks.join(', ')})` : ''}`,
+		`Provenance: ${entry.provenanceStatus}`,
+		...metadataLines,
+	].join('\n');
+	return `${header}\n\n${entry.text}`;
+}
+
+/**
+ * Converts one approved metadata value to the display form used in transcript headers.
+ *
+ * @param {string} key - Metadata field name.
+ * @param {unknown} value - Approved field value.
+ * @return {string} Human-readable key-value line.
+ */
+function fmtMetadataField(key, value) {
+	return `${key}: ${Array.isArray(value) ? value.join(', ') : value}`;
+}
+
+/**
+ * Summarizes the files and week states emitted by the inventory run.
+ *
+ * @return {object} Counts and identifiers printed to stdout after writing reports.
+ */
+function createSummary() {
+	let foundWeeks = 0;
+	const partialWeeks = [];
+	const missingWeeks = [];
+	let duplicates = 0;
+	for (const weekReport of report) {
+		if (weekReport.status === 'found') foundWeeks++;
+		if (weekReport.status === 'partial') partialWeeks.push(weekReport.week);
+		if (weekReport.status === 'missing') missingWeeks.push(weekReport.week);
+		duplicates += weekReport.duplicateSources.length;
+	}
+	const missingExpectedMeetings = [];
+	for (const meeting of manifest.missingExpectedMeetings) missingExpectedMeetings.push(meeting.id);
+	return {
+		output: outputRoot,
+		transcriptFiles: entries.length,
+		foundWeeks,
+		partialWeeks,
+		missingWeeks,
+		missingExpectedMeetings,
+		unmatchedSources: unmatchedSources.length,
+		readErrors: readErrs.length,
+		duplicates,
+	};
+}
+
 if (!inputArg || !outputArg || !Number.isInteger(weeks) || weeks < 1) {
 	console.error('Usage: canvas-transcripts --input=EXPORT_DIR --output=TRANSCRIPT_DIR [--weeks=12] [--mapping=SOURCE_MAP.json] [--expected=EXPECTED_MEETINGS.json]');
 	process.exit(2);
@@ -191,16 +404,20 @@ if (inputRoot === outputRoot) throw new Error('Input and output directories must
 await mkdir(outputRoot, { recursive: true });
 if (!isRecord(mappingObjectValue)) throw new Error('Source mapping must be an object keyed by source-relative path or filename.');
 for (const [key, rawRecord] of Object.entries(mappingObjectValue)) {
+	let hasValidStringMetadata = true;
+	for (const field of ['recordingUrl', 'meetingTitle', 'meetingDate', 'platform', 'captureMethod', 'transcriptOrigin', 'language', 'visibleVerification', 'captionStatus']) {
+		if (rawRecord && isRecord(rawRecord) && rawRecord[field] !== undefined && typeof rawRecord[field] !== 'string') {
+			hasValidStringMetadata = false;
+			break;
+		}
+	}
 	if (
 		!isRecord(rawRecord) ||
 		(rawRecord.week !== undefined && typeof rawRecord.week !== 'string' && typeof rawRecord.week !== 'number') ||
-		!['recordingUrl', 'meetingTitle', 'meetingDate', 'platform', 'captureMethod', 'transcriptOrigin', 'language', 'visibleVerification', 'captionStatus'].every(
-			(field) => rawRecord[field] === undefined || typeof rawRecord[field] === 'string',
-		) ||
-		(rawRecord.expectedIds !== undefined && (!Array.isArray(rawRecord.expectedIds) || !rawRecord.expectedIds.every((id) => typeof id === 'string')))
-	) {
+		!hasValidStringMetadata ||
+		(rawRecord.expectedIds !== undefined && !isStringArray(rawRecord.expectedIds))
+	)
 		continue;
-	}
 	const record = /** @type {MappingRecord} */ (rawRecord);
 	const normKey = normLookup(key);
 	mappingByPath.set(normKey, record);
@@ -246,7 +463,7 @@ while (pendingDirs.length) {
 	]) {
 		for (const match of source.matchAll(pattern)) candidates.add(Number(match[1]));
 	}
-	const inferredWeeks = [...candidates].sort((left, right) => left - right);
+	const inferredWeeks = [...candidates].sort(compNumbers);
 	const mappedWeek = Number(mapping.record?.week);
 	const week = Number.isInteger(mappedWeek) && mappedWeek > 0 ? mappedWeek : inferredWeeks.length === 1 ? inferredWeeks[0] : undefined;
 	if (week && week > weeks) {
@@ -301,43 +518,13 @@ while (pendingDirs.length) {
 	});
 	if (!week) unmatchedSources.push({ source, reason: inferredWeeks.length > 1 ? 'ambiguous-week-patterns' : 'week-not-determined', inferredWeeks, mappingMatch: mapping.match });
 }
-const expectedReportEntries = expectedMeetings.map((rawMeeting) => {
-	const meeting = /** @type {ExpectedMeeting} */ (rawMeeting);
-	const week = Number(meeting.week);
-	const matched = entries.filter((entry) =>
-		[...(Array.isArray(meeting.matchAny) ? meeting.matchAny : []), ...(Array.isArray(meeting.expectedIds) ? meeting.expectedIds : []), meeting.id]
-			.map(normMatch)
-			.filter(Boolean)
-			.some((token) =>
-				[
-					entry.source,
-					entry.name,
-					entry.metadata.meetingTitle,
-					...(Array.isArray(entry.metadata.expectedIds) && entry.metadata.expectedIds.every((id) => typeof id === 'string') ? entry.metadata.expectedIds : []),
-				]
-					.filter(Boolean)
-					.map(normMatch)
-					.some((value) => value.includes(token)),
-			),
-	);
-	return {
-		id: meeting.id,
-		week,
-		title: meeting.title || meeting.id,
-		required: meeting.required !== false,
-		status: matched.some((entry) => entry.week === week)
-			? 'found'
-			: matched.some((entry) => Number.isInteger(entry.week) && entry.week !== week)
-				? 'wrong-week'
-				: matched.length
-					? 'unassigned-week'
-					: 'missing',
-		matchedSources: matched.map((entry) => ({ source: entry.source, week: entry.week ?? null, sha256: entry.sha256 })),
-	};
-});
+const expectedReportEntries = [];
+for (const rawMeeting of expectedMeetings) expectedReportEntries.push(createExpectedMeetingReport(rawMeeting));
 manifest.transcriptFileCount = entries.length;
-manifest.missingExpectedMeetings = expectedReportEntries.filter((i) => i.required && i.status !== 'found');
-entries.sort((a, b) => a.source.localeCompare(b.source));
+for (const expected of expectedReportEntries) {
+	if (expected.required && expected.status !== 'found') manifest.missingExpectedMeetings.push(expected);
+}
+entries.sort(compSourceEntries);
 for (const entry of entries) {
 	if (!entry.week) continue;
 	grouped.set(entry.week, [...(grouped.get(entry.week) || []), entry]);
@@ -351,59 +538,34 @@ for (let week = 1; week <= weeks; week++) {
 		seen.add(file.sha256);
 		unique.push(file);
 	}
-	const primarySource = new Map(unique.map((file) => [file.sha256, file.source]));
-	const expectedForWeek = expectedReportEntries.filter((i) => i.week === week);
-	const missingExpected = expectedForWeek.filter((i) => i.required && i.status !== 'found');
+	const primarySource = new Map();
+	for (const file of unique) primarySource.set(file.sha256, file.source);
+	const expectedForWeek = [];
+	const missingExpected = [];
+	for (const expected of expectedReportEntries) {
+		if (expected.week !== week) continue;
+		expectedForWeek.push(expected);
+		if (expected.required && expected.status !== 'found') missingExpected.push(expected);
+	}
+	const reportFiles = [];
+	for (const file of files) reportFiles.push(toReportFile(file));
+	const duplicateSources = [];
+	for (const file of files) {
+		if (primarySource.get(file.sha256) !== file.source) duplicateSources.push({ source: file.source, sha256: file.sha256 });
+	}
+	const missingExpectedIds = [];
+	for (const expected of missingExpected) missingExpectedIds.push(expected.id);
 	report.push({
 		week,
 		status: unique.length === 0 ? 'missing' : missingExpected.length ? 'partial' : 'found',
-		files: files.map(({ name, source, sha256, bytes, extension, weekMethod, inferredWeeks, metadata, provenanceStatus, mappingMatch }) => ({
-			name,
-			source,
-			sha256,
-			bytes,
-			format: extension.slice(1),
-			weekEvidence: { method: weekMethod, candidates: inferredWeeks },
-			provenanceStatus,
-			metadata,
-			mappingMatch,
-		})),
+		files: reportFiles,
 		uniqueTranscriptCount: primarySource.size,
-		duplicateSources: files.filter((file) => primarySource.get(file.sha256) !== file.source).map(({ source, sha256 }) => ({ source, sha256 })),
+		duplicateSources,
 		expectedMeetings: expectedForWeek,
-		missingExpectedIds: missingExpected.map((i) => i.id),
+		missingExpectedIds,
 	});
-	const body = unique.length
-		? unique
-				.map(
-					(file) =>
-						`${[
-							`Source: ${file.source}`,
-							`SHA-256: ${file.sha256}`,
-							`Week evidence: ${file.weekMethod}${file.inferredWeeks.length ? ` (${file.inferredWeeks.join(', ')})` : ''}`,
-							`Provenance: ${file.provenanceStatus}`,
-							...Object.entries(file.metadata).map(([key, i]) => `${key}: ${Array.isArray(i) ? i.join(', ') : i}`),
-						].join('\n')}\n\n${file.text}`,
-				)
-				.join('\n\n---\n\n')
-		: `No transcript file was assigned to Week ${String(week).padStart(2, '0')} in this run. See transcripts-manifest.json for unresolved files, expected meetings, and capture gaps.`;
+	const body = renderWeekBody(unique, week);
 	await writeFile(path.join(outputRoot, `Week-${String(week).padStart(2, '0')}.txt`), body.endsWith('\n') ? body : `${body}\n`);
 }
 await writeFile(path.join(outputRoot, 'transcripts-manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
-console.log(
-	JSON.stringify(
-		{
-			output: outputRoot,
-			transcriptFiles: entries.length,
-			foundWeeks: report.filter((i) => i.status === 'found').length,
-			partialWeeks: report.filter((i) => i.status === 'partial').map((i) => i.week),
-			missingWeeks: report.filter((i) => i.status === 'missing').map((i) => i.week),
-			missingExpectedMeetings: manifest.missingExpectedMeetings.map((i) => i.id),
-			unmatchedSources: unmatchedSources.length,
-			readErrors: readErrs.length,
-			duplicates: report.flatMap((i) => i.duplicateSources).length,
-		},
-		null,
-		2,
-	),
-);
+console.log(JSON.stringify(createSummary(), null, 2));

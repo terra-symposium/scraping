@@ -2,45 +2,91 @@
 	"$schema": "./config/node_modules/@terra-symposium/standards-quality/quality.schema.json",
 	"root": ".",
 	"configRoot": "config",
-	"sourceRoots": ["src"],
-	"extensions": [".js", ".mjs", ".ts", ".mts"],
+	"sourceRoots": ["."],
+	"languageProfiles": ["c", "java", "python"],
+	"extensions": [
+		".astro",
+		".c",
+		".cjs",
+		".cpp",
+		".cts",
+		".css",
+		".h",
+		".html",
+		".java",
+		".js",
+		".jsx",
+		".json",
+		".jsonc",
+		".md",
+		".mdx",
+		".mjs",
+		".mts",
+		".py",
+		".pyi",
+		".rs",
+		".sh",
+		".sql",
+		".toml",
+		".ts",
+		".tsx",
+		".yaml",
+		".yml"
+	],
 	"tools": {
-		"eslint": "eslint",
-		"knip": "knip",
-		"prettier": "prettier"
+		"eslint": "config/node_modules/.bin/eslint",
+		"knip": "config/node_modules/.bin/knip",
+		"prettier": "config/node_modules/.bin/prettier"
 	},
-	"lintRoots": ["src"],
-	"typecheckRoots": ["src"],
 	"tsconfig": "tsconfig.json",
 	"oneLineImports": true,
 	"prettierPrintWidth": 180,
 	"documentation": {
 		"required": {
 			"types": true,
-			"functions": false,
-			"exportedFunctions": true,
-			"noInlineFunctions": false
-		}
+			"functions": true,
+			"exportedFunctions": true
+		},
+		"commandRoots": ["."]
 	},
 	"enabledChecks": {
+		"document": true,
 		"format": true,
+		"import": true,
+		"name": true,
+		"forward": true,
+		"accessibility": true,
+		"display-name": true,
+		"performance-patterns": true,
+		"documented-commands": true,
 		"lint": true,
 		"knip": true,
+		"dead-code": true,
 		"type": true,
 		"recommend": true,
-		"name": true,
-		"alias": true
+		"command": true,
+		"diff": true,
+		"alias": true,
+		"security": true,
+		"repeated-classes": true,
+		"tailwind-canonical": true,
+		"regex-dedup": true,
+		"ui-patterns": true,
+		"ui-recommendations": true,
+		"error-boundaries": true,
+		"github": true
 	},
-	"qualityCommands": [
-		{
-			"name": "build",
-			"command": "pnpm",
-			"args": ["run", "build"]
-		},
-		{
-			"name": "docs-build",
-			"command": "pnpm",
-			"args": ["--dir", "config", "run", "build"]
-		}
-	]
+	"performancePatterns": {
+		"extensions": [".cjs", ".cts", ".js", ".jsx", ".mjs", ".mts", ".ts", ".tsx"]
+	},
+	"security": {
+		"runtimeRoots": ["src/workflows/parallel.ts"]
+	},
+	"github": {
+		"repositories": ["Terra-Symposium/scraping"]
+	},
+	"autofix": {
+		"document": false
+	},
+	"qualityCommands": [{ "name": "test", "command": "pnpm", "args": ["run", "test"] }]
 }

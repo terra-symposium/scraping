@@ -1,0 +1,59 @@
+---
+title: API reference
+description: Public package imports, TypeScript APIs, command-line tools, and consumer boundaries.
+sidebar:
+  label: 03. Reference
+---
+
+The package exposes browser, authentication, parallel-work, Canvas, and Australian syllabus APIs. It also ships commands for Canvas collection, syllabus downloads, and offline transcript inventory.
+
+## Choose an import path
+
+These are the supported package exports. Do not import files from `src/` or `dist/` directly.
+
+| Import path                                    | Public API                                                                       |
+| ---------------------------------------------- | -------------------------------------------------------------------------------- |
+| `@terra-symposium/scraping`                    | All Canvas, browser, parallel, and syllabus exports.                             |
+| `@terra-symposium/scraping/canvas`             | Canvas data types, URL and filename helpers, discovery, capture, and downloads.  |
+| `@terra-symposium/scraping/workflows`          | All browser, parallel, and syllabus exports.                                     |
+| `@terra-symposium/scraping/workflows/browser`  | Browser launch, authenticated sessions, and cleanup.                             |
+| `@terra-symposium/scraping/workflows/parallel` | Worker-count resolution, bounded queues, and process slots.                      |
+| `@terra-symposium/scraping/workflows/syllabus` | Australian curriculum sources, Word downloads, and local document normalization. |
+
+|||[Root package import]
+The root import is the shortest option when the application uses several workflow areas:
+
+```ts
+import { authenticateWorkflow, resolveWorkerCount, runQueued } from '@terra-symposium/scraping';
+```
+
+|||
+
+|||[Focused imports]
+Use a focused subpath when the module boundary should be explicit:
+
+```ts
+import { scrapeCanvas } from '@terra-symposium/scraping/canvas';
+import type { CanvasScrapeOptions } from '@terra-symposium/scraping/canvas';
+import { fetchAustralianSyllabus } from '@terra-symposium/scraping/workflows/syllabus';
+```
+
+|||
+
+All entry points include TypeScript declarations. Import types with a type-only import when the consumer's compiler requires it.
+
+## Reference pages
+
+| Reference                                                            | Covers                                                                  |
+| -------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| [Canvas API](/01-scraping/03-reference/01-canvas/)                   | Export types, managed and lower-level collection, URL and file helpers. |
+| [Workflow APIs](/01-scraping/03-reference/02-workflows/)             | Browser/authentication, concurrency, and syllabus API contracts.        |
+| [Command-line reference](/01-scraping/03-reference/03-command-line/) | Flags and defaults for all three commands.                              |
+
+The task-focused [Canvas guide](/01-scraping/02-guides/03-canvas-export/) explains collection and review. The [syllabus guide](/01-scraping/02-guides/04-australian-syllabus/) explains the configured sources and local document handling. The [transcript guide](/01-scraping/02-guides/05-transcript-inventory/) includes metadata and expected-meeting examples.
+
+## Shared package boundaries
+
+The package owns browser-session mechanics, readiness-callback orchestration, bounded queues, Canvas collection helpers, configured Australian syllabus fetchers, and the offline transcript inventory command.
+
+Consumers own service-specific account selection, selectors outside the shared Canvas and syllabus adapters, AI generation, note formatting, review, and publishing. The package writes source material to local paths; it does not publish to Terra Docs or Sanity and does not edit Uni Notes content.

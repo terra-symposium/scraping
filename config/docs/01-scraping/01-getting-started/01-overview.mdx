@@ -1,0 +1,130 @@
+---
+title: Getting started
+description: Install the shared package and choose an interface for your workflow.
+sidebar:
+  label: Overview
+---
+
+Terra Symposium Scraping is the shared package used by the Terra Symposium Website and Uni Notes. It provides browser-session and authentication helpers, parallel-work controls, Canvas collection, Australian syllabus downloads, and offline transcript inventory.
+
+The package saves source material to local files. Website and Uni Notes own the transformations, review, and publishing that follow.
+
+<Nodes
+	direction="TB"
+	height={480}
+	nodes={`[
+    {"id":"consumer","type":"origin","data":{"title":"Website or Uni Notes"}},
+    {"id":"package","type":"process","data":{"title":"Shared scraping package"}},
+    {"id":"browser","type":"process","data":{"title":"Canvas and syllabus"}},
+    {"id":"offline","type":"process","data":{"title":"Transcript files"}},
+    {"id":"local","type":"data","data":{"title":"Local files and reports"}},
+    {"id":"review","type":"terminal","data":{"title":"Consumer review and publishing"}}
+  ]`}
+	edges={`[
+    {"id":"consumer-package","source":"consumer","target":"package"},
+    {"id":"package-browser","source":"package","target":"browser"},
+    {"id":"package-offline","source":"package","target":"offline"},
+    {"id":"browser-local","source":"browser","target":"local"},
+    {"id":"offline-local","source":"offline","target":"local"},
+    {"id":"local-review","source":"local","target":"review"}
+  ]`}
+/>
+
+## Choose a section
+
+| Section                                     | Use it to                                                           |
+| ------------------------------------------- | ------------------------------------------------------------------- |
+| [Guides](/01-scraping/02-guides/)           | Set up sessions, parallel work, Canvas, syllabuses, or transcripts. |
+| [API reference](/01-scraping/03-reference/) | Look up public imports, types, helpers, and command-line options.   |
+| [Maintenance](/01-scraping/04-maintenance/) | Run repository quality, serve Docs, and prepare releases.           |
+
+## Package boundaries
+
+The package provides reusable mechanics and local collection. It does not create or publish notes, send captured content to an AI service, or write to Terra Docs or Sanity. Each consumer decides what to retain and how to review it.
+
+Install a reviewed Git tag in the Website or Uni Notes repository. Browser workflows also need Playwright's Chromium browser; the transcript inventory command is local and does not launch a browser.
+
+## Install
+
+Run these commands from the consuming repository:
+
+```sh
+pnpm add 'github:Terra-Symposium/scraping#v0.2.0'
+pnpm exec playwright install chromium
+```
+
+After updating the dependency, install with that repository's lockfile and permit the package build step under its pnpm policy. Keep the resolved Git commit in the lockfile.
+
+## Choose an interface
+
+Use the CLI for a complete local collection task. Use the TypeScript API when the application needs to coordinate browser sessions, authentication, or worker limits with its own work.
+
+|||[TypeScript workflow]
+The consumer supplies its service-specific page setup, readiness predicate, and unit of work. This example shows the shared session and concurrency helpers together:
+
+```ts
+import { authenticateWorkflow, resolveWorkerCount, runQueued } from '@terra-symposium/scraping';
+
+const session = await authenticateWorkflow({
+	sessionName: 'course-workflow',
+	headed: false,
+	interactive: true,
+	open: async (context) => {
+		const page = await context.newPage();
+		await page.goto('https://example.edu/courses');
+		return page;
+	},
+	isReady: async (page) =>
+		page
+			.locator('[data-course-list]')
+			.isVisible()
+			.catch(() => false),
+});
+
+try {
+	const failures = await runQueued(courseIds, resolveWorkerCount(3, 'courses'), async (courseId) => collectCourse(courseId, session.value));
+	console.log(failures);
+} finally {
+	await session.close();
+}
+```
+
+The consuming application supplies the course list and its collection function. The [browser guide](/01-scraping/02-guides/01-browser-sessions/) explains session ownership and the [parallel-work guide](/01-scraping/02-guides/02-parallel-work/) explains worker limits and failures.
+|||
+
+|||[Command-line tools]
+Run an installed command from the consuming repository. Each command accepts --help.
+
+```sh
+pnpm exec canvas-export --canvas-url=https://canvas.example.edu/dashboard
+pnpm exec syllabus-fetch --state=NSW
+pnpm exec canvas-transcripts --input=/path/to/sources --output=/path/to/inventory --weeks=12
+```
+
+Canvas and syllabus commands use Chromium. Transcript inventory reads .txt, .vtt, and .srt files and makes no network requests.
+|||
+
+## Keep application responsibilities clear
+
+|||[Website]
+Website can reuse browser, authentication, and concurrency helpers. It may supply createSession when it needs its existing Chrome channel or persistent-profile selection. Gemini and Sanity selectors, account checks, screenshots, AI generation, and publishing remain Website-owned.
+|||
+
+|||[Uni Notes]
+Uni Notes can use Canvas exports, downloaded syllabuses, and transcript inventory as local source material. It owns Markdown organization, content review, and deciding when material is added to the notes tree.
+|||
+
+Both consumers own service-specific account selection and selectors outside the shared Canvas and syllabus adapters. The package does not publish to Terra Docs or Sanity and does not decide whether an export becomes a note.
+
+## What the package stores
+
+No service token or repository-specific secret is required for the shared helpers. Browser login state is stored outside the repository by default. A caller can pass storageStatePath to select another Playwright state file; treat that file as a credential and keep it private.
+
+## Next steps
+
+- [Browser sessions and authentication](/01-scraping/02-guides/01-browser-sessions/)
+- [Parallel work](/01-scraping/02-guides/02-parallel-work/)
+- [Canvas export](/01-scraping/02-guides/03-canvas-export/)
+- [Australian syllabus acquisition](/01-scraping/02-guides/04-australian-syllabus/)
+- [Transcript inventory](/01-scraping/02-guides/05-transcript-inventory/)
+- [API reference](/01-scraping/03-reference/)

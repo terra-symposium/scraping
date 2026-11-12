@@ -1,0 +1,66 @@
+---
+title: Quality and releases
+description: Install tooling, run the full quality wrapper, serve the Docs site, and release reviewed package tags.
+---
+
+The package and its Docs and quality tooling use separate dependency directories. Use the repository root for package commands and prefix Docs commands with `pnpm --dir config`.
+
+## Repository tasks
+
+|||[Build and run quality]
+From the repository root, install package dependencies and build the TypeScript package:
+
+```sh
+pnpm install
+pnpm run build
+```
+
+Install the Docs and quality-tool dependencies from the committed lockfile:
+
+```sh
+pnpm --dir config install --frozen-lockfile
+```
+
+Run the complete quality wrapper from the repository root:
+
+```sh
+pnpm run quality
+```
+
+The wrapper runs formatting, dead-code analysis, lint, source analysis, React error-boundary checks, import validation, naming, aliases, forwarding, documentation checks, the package build, the Docs build, and repository-diff validation. No standalone test suite is configured.
+
+To build only one artifact, use `pnpm run build` for the TypeScript package or `pnpm --dir config run build` for the Docs site at `config/dist/docs`.
+|||
+
+|||[Build and serve Docs]
+Build and serve the static Docs output from the repository root:
+
+```sh
+pnpm --dir config run build
+pnpm --dir config run preview
+```
+
+The preview runs in the background at `http://127.0.0.1:2060/`. Check its status or stop it with:
+
+```sh
+pnpm --dir config exec astro preview status
+pnpm --dir config exec astro preview stop
+```
+
+:::note[Live editing]
+
+For live source editing, run `pnpm --dir config run docs`. With the currently installed `@terra-symposium/docs` 0.4.3, the dev server logs “Failed to create the dev server app: module is not defined” and HTTP requests hang even though it reports that it started. Use the static preview while that dev-server error is present. Check or stop its process with `pnpm --dir config exec astro dev status` or `pnpm --dir config exec astro dev stop`.
+
+:::
+|||
+
+|||[Release a package tag]
+
+1. Update the package version in the root `package.json`.
+2. Run `pnpm run quality` and review the package and Docs changes.
+3. Commit the release change and create the matching `vX.Y.Z` Git tag.
+4. Push the branch and tag to `Terra-Symposium/scraping`.
+5. Update the Website and Uni Notes Git dependency pins and lockfiles.
+
+Consumers install the package from Git. No npm publish or repository CI workflow is configured. Keep the Git tag and package version aligned so each consumer lockfile resolves the intended commit. No hosted Docs deployment is configured.
+|||

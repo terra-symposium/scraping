@@ -1,0 +1,108 @@
+---
+title: Parallel work
+description: Resolve shared worker limits, run bounded queues, and coordinate concurrent processes.
+---
+
+The package provides helpers for two scopes. `runQueued` limits concurrency inside one Node process. `acquireWorkflowSlot` coordinates a limit across separate processes. `resolveWorkerCount` gives commands and applications the same worker-count precedence.
+
+## Choose the coordination scope
+
+<Nodes
+	direction="TB"
+	height={470}
+	nodes={`[
+    {"id":"workflow","type":"origin","data":{"title":"Choose a workflow limit"}},
+    {"id":"scope","type":"decision","data":{"title":"One Node process or several?"}},
+    {"id":"queue","type":"process","data":{"title":"One process: resolveWorkerCount + runQueued"}},
+    {"id":"slot","type":"process","data":{"title":"Several processes: acquireWorkflowSlot"}},
+    {"id":"release","type":"terminal","data":{"title":"Release each acquired slot in finally"}}
+  ]`}
+	edges={`[
+    {"id":"workflow-scope","source":"workflow","target":"scope"},
+    {"id":"scope-queue","source":"scope","target":"queue","data":{"label":"One"}},
+    {"id":"scope-slot","source":"scope","target":"slot","data":{"label":"Several"}},
+    {"id":"slot-release","source":"slot","target":"release"}
+  ]`}
+/>
+
+Resolve a worker count once, then pass it to the work queue. Use a process slot only when independent processes must share the same external-service or machine limit.
+
+## Resolve worker counts
+
+```ts
+import { resolveWorkerCount } from '@terra-symposium/scraping';
+
+const workers = resolveWorkerCount(4, 'canvas');
+```
+
+`resolveWorkerCount` selects the first valid positive safe integer in this order:
+
+1. `--workers=N` or `--workers N`.
+2. `PW_<DOMAIN>_WORKERS` when a domain is supplied; the domain is uppercased.
+3. `PW_HEADED_WORKERS` when process arguments contain `--headed`.
+4. `PW_WORKERS`.
+5. The supplied fallback, or `5` when omitted.
+
+Invalid values (including zero, negative, fractional, and unsafe integers) are ignored. An invalid fallback resolves to `1`. Pass `argv` and `env` for deterministic lookup independent of the current process:
+
+```ts
+const workers = resolveWorkerCount(4, 'canvas', {
+	argv: ['node', 'export.mjs', '--headed'],
+	env: { PW_HEADED_WORKERS: '2', PW_WORKERS: '8' },
+});
+```
+
+## Run work in one process
+
+|||[Bound a queue]
+`runQueued` starts no more than the selected number of workers. Each input is passed to `execute(item, index)` once.
+
+```ts
+import { resolveWorkerCount, runQueued } from '@terra-symposium/scraping';
+
+const failures = await runQueued(courseUrls, resolveWorkerCount(4, 'canvas'), async (courseUrl, index) => {
+	await exportCourse(courseUrl, index);
+});
+```
+
+|||
+
+|||[Limit independent processes]
+`acquireWorkflowSlot` waits for one of the shared pool's slots and returns an idempotent async release callback.
+
+```ts
+import { acquireWorkflowSlot } from '@terra-symposium/scraping';
+
+const release = await acquireWorkflowSlot({
+	name: 'canvas-downloads',
+	size: 2,
+});
+
+try {
+	await downloadBatch();
+} finally {
+	await release();
+}
+```
+
+Keep lock names stable across callers. Processes sharing a pool must use the same size.
+|||
+
+## Failure behavior
+
+`runQueued` captures rejections as `QueueFailure` records sorted by input index. Each record contains the original item, its index, and the thrown value in `error`. A failed item does not cancel or retry sibling work. The helper does not stop at the first failure or throw an aggregate error; callers decide how to handle the returned failures.
+
+Invalid, non-finite, zero, or negative worker counts result in one worker. Finite fractions are floored. Choose a limit that respects both local browser capacity and the external service's rules.
+
+===[Cross-process slot details]
+Without `directory`, the pool is under the OS temporary directory and scoped to a hash of the resolved current working directory plus the sanitized pool name. Processes in the same checkout using the same name share a pool; different working directories receive separate default pools.
+
+Set `directory` to the same resolved path in each process when callers from different working directories must coordinate. An explicit directory replaces the default name-scoped path. All processes sharing a pool must agree on its size.
+
+The default polling interval is 250 milliseconds; set `pollMs` to change it. An `AbortSignal` can cancel a waiting acquisition; the helper throws `signal.reason` when available, or an abort error. Invalid lock files and locks owned by dead processes are removed when encountered. Locks whose owner cannot be inspected because of permission limits are treated as active.
+
+# The lock directory and files are restricted to the owner where the operating system supports those permissions. Release the slot as soon as the constrained operation is done.
+
+## API reference
+
+See [parallel API types and signatures](/01-scraping/03-reference/02-workflows/#parallel-work-api) for `ResolveWorkerCountOptions`, `QueueFailure`, `WorkflowSlotOptions`, and exact function signatures.

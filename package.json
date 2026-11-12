@@ -51,11 +51,14 @@
 	"scripts": {
 		"build": "tsc -p tsconfig.json",
 		"typecheck": "tsc --noEmit -p tsconfig.json",
+		"test": "pnpm run build && node --test tests/*.test.mjs",
 		"prepare": "pnpm run build",
 		"canvas:export": "node dist/cli/export.js",
 		"canvas:transcripts": "node src/cli/transcripts.mjs",
 		"syllabus:fetch": "node dist/cli/syllabus.js",
-		"quality": "pnpm --dir config run quality"
+		"quality": "pnpm run quality:check",
+		"quality:fix": "pnpm --dir config run quality:fix",
+		"quality:check": "pnpm --dir config run quality:check"
 	},
 	"dependencies": {
 		"adm-zip": "^0.6.1",

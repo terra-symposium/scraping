@@ -1,0 +1,128 @@
+import assert from 'node:assert/strict';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { spawn } from 'node:child_process';
+import os from 'node:os';
+import path from 'node:path';
+import process from 'node:process';
+import { test } from 'node:test';
+import { setTimeout as delay } from 'node:timers/promises';
+import { URL } from 'node:url';
+import { acquireWorkflowSlot, resolveWorkerCount, runQueued } from '../dist/workflows/parallel.js';
+
+/**
+ * Confirms worker-count overrides keep their documented precedence and validation.
+ */
+function resolvesWorkerOverrides() {
+	assert.equal(resolveWorkerCount(3, 'courses', { argv: ['node', 'script', '--workers=2'], env: { PW_COURSES_WORKERS: '4' } }), 2);
+	assert.equal(resolveWorkerCount(3, 'courses', { argv: ['node', 'script', '--workers', '5'], env: { PW_COURSES_WORKERS: '4' } }), 5);
+	assert.equal(resolveWorkerCount(3, 'courses', { argv: ['node', 'script'], env: { PW_COURSES_WORKERS: '4', PW_WORKERS: '6' } }), 4);
+	assert.equal(resolveWorkerCount(3, undefined, { argv: ['node', 'script'], env: { PW_WORKERS: '0' } }), 3);
+	assert.equal(resolveWorkerCount(0, undefined, { argv: ['node', 'script'], env: {} }), 1);
+}
+
+/**
+ * Verifies queue workers respect their limit and return failures in input order.
+ */
+async function runsBoundedQueueWork() {
+	let activeWorkers = 0;
+	let maximumWorkers = 0;
+	const completed = [];
+	async function executeItem(item, index) {
+		activeWorkers++;
+		maximumWorkers = Math.max(maximumWorkers, activeWorkers);
+		try {
+			await delay(item === 1 ? 15 : 2);
+			if (item > 0) throw new Error(`item-${item}`);
+			completed.push(index);
+		} finally {
+			activeWorkers--;
+		}
+	}
+
+	const failures = await runQueued([0, 1, 2, 3], 2, executeItem);
+	assert.equal(maximumWorkers, 2);
+	assert.deepEqual(completed, [0]);
+	assert.deepEqual(failures.map(failureIndex), [1, 2, 3]);
+}
+
+/**
+ * Reads an input index from a queued worker failure.
+ *
+ * @param failure Queue failure to inspect.
+ *
+ * @return Original input index.
+ */
+function failureIndex(failure) {
+	return failure.index;
+}
+
+/**
+ * Confirms a workflow slot can be cancelled while occupied and released more than once.
+ */
+async function releasesWorkflowSlots() {
+	const dir = await mkdtemp(path.join(os.tmpdir(), 'terra-workflow-slot-'));
+	try {
+		const release = await acquireWorkflowSlot({ name: 'parallel-test', size: 1, directory: dir, pollMs: 1 });
+		const controller = new globalThis.AbortController();
+		controller.abort(new Error('cancelled'));
+		await assert.rejects(acquireWorkflowSlot({ name: 'parallel-test', size: 1, directory: dir, signal: controller.signal }), /cancelled/u);
+		await release();
+		await release();
+		const releaseAgain = await acquireWorkflowSlot({ name: 'parallel-test', size: 1, directory: dir, pollMs: 1 });
+		await releaseAgain();
+	} finally {
+		await rm(dir, { recursive: true, force: true });
+	}
+}
+
+test('worker count resolves CLI, domain, environment, and fallback values', resolvesWorkerOverrides);
+test('queued work stays bounded and sorts worker failures by input index', runsBoundedQueueWork);
+test('workflow slots release idempotently and honor cancellation', releasesWorkflowSlots);
+
+test('workflow slots serialize acquisitions across processes', async () => {
+	const root = await mkdtemp(path.join(os.tmpdir(), 'terra-workflow-process-lock-'));
+	const lockDir = path.join(root, 'locks');
+	const eventPath = path.join(root, 'events.txt');
+	const moduleUrl = new URL('../dist/workflows/parallel.js', import.meta.url).href;
+	const source = `
+		import { appendFile } from 'node:fs/promises';
+		import { setTimeout as delay } from 'node:timers/promises';
+		import { acquireWorkflowSlot } from ${JSON.stringify(moduleUrl)};
+		const [lockDir, eventPath, workerId] = process.argv.slice(1);
+		const release = await acquireWorkflowSlot({ name: 'parallel-test', size: 1, directory: lockDir, pollMs: 2 });
+		try {
+			await appendFile(eventPath, '+' + workerId + '\\n');
+			await delay(30);
+			await appendFile(eventPath, '-' + workerId + '\\n');
+		} finally {
+			await release();
+		}
+	`;
+	const runWorker = (id) =>
+		new Promise((resolve, reject) => {
+			const worker = spawn(process.execPath, ['--input-type=module', '--eval', source, lockDir, eventPath, id], {
+				stdio: 'ignore',
+			});
+			worker.once('error', reject);
+			worker.once('exit', (code, signal) => {
+				if (code === 0) resolve(undefined);
+				else reject(new Error(`Workflow lock worker exited with code ${code} and signal ${signal}.`));
+			});
+		});
+	try {
+		await Promise.all([runWorker('first'), runWorker('second')]);
+		const active = new Set();
+		for (const event of (await readFile(eventPath, 'utf8')).trim().split('\n')) {
+			const [op, id] = [event[0], event.slice(1)];
+			if (op === '+') {
+				assert.equal(active.size, 0, 'a second process entered while the workflow slot was occupied');
+				active.add(id);
+			} else {
+				assert.equal(active.delete(id), true, 'a process released a slot it did not own');
+			}
+		}
+		assert.equal(active.size, 0);
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});

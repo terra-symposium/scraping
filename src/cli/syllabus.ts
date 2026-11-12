@@ -21,20 +21,33 @@ CONFIG
 
 const args = process.argv.slice(2);
 
-const option = (name: string): string | undefined => {
+/**
+ * Reads either supported form of a named command-line option.
+ *
+ * @param name Option name without its leading dashes.
+ *
+ * @return The option value when supplied, otherwise `undefined`.
+ */
+function option(name: string): string | undefined {
 	const prefix = `--${name}=`;
-	const inline = args.find((argument) => argument.startsWith(prefix));
-	if (inline) return inline.slice(prefix.length);
+	for (const argument of args) if (argument.startsWith(prefix)) return argument.slice(prefix.length);
 	const index = args.indexOf(`--${name}`);
 	return index >= 0 ? args[index + 1] : undefined;
-};
+}
+
+/**
+ * Announces that an interactive sign-in window is ready for the user.
+ */
+function notifyInteractiveSignIn(): void {
+	console.log('Complete sign-in in the visible browser window.');
+}
 
 /*//////////////////////////////////////////////////
 HELPERS
 //////////////////////////////////////////////////*/
 
 try {
-	if (args.includes('--help') || args.includes('-h')) {
+	if (args.includes('--help') || args.includes('-h'))
 		console.log(`Usage: syllabus-fetch --state=NSW [options]
 States: ${Object.keys(AUSTRALIAN_SYLLABUS_SOURCES).join(', ')}
 Options:
@@ -46,7 +59,7 @@ Options:
   --storage-state=PATH        Playwright state file; defaults outside the repository
   --timeout=MS                Download-control timeout (default: 30000)
   --help                      Show this help`);
-	} else {
+	else {
 		const state = option('state')?.toUpperCase() as AustralianSyllabusState | undefined;
 		if (!state || !(state in AUSTRALIAN_SYLLABUS_SOURCES)) throw new Error('A supported jurisdiction is required. Run syllabus-fetch --help for usage.');
 		const timeoutMs = Number(option('timeout'));
@@ -61,7 +74,7 @@ Options:
 					interactive: args.includes('--interactive') || args.includes('--headed'),
 					storageStatePath: option('storage-state'),
 					...(Number.isSafeInteger(timeoutMs) && timeoutMs > 0 ? { timeoutMs } : {}),
-					onInteractiveStart: () => console.log('Complete sign-in in the visible browser window.'),
+					onInteractiveStart: notifyInteractiveSignIn,
 				}),
 				null,
 				2,
