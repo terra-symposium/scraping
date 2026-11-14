@@ -8,7 +8,7 @@ The Canvas workflow discovers courses and module groups visible to a signed-in u
 ## Collection flow
 
 <Nodes
-	direction="TB"
+	direction='TB'
 	height={560}
 	nodes={`[
     {"id":"url","type":"origin","data":{"title":"Start with a Canvas URL"}},
@@ -47,11 +47,9 @@ pnpm exec playwright install chromium
 pnpm exec canvas-export --canvas-url=https://canvas.example.edu/dashboard --headed --groups="Week 1,Week 2"
 ```
 
-The default output is `~/Downloads/canvas-export`. Use `--output=PATH` to change it. `--groups` accepts comma-separated, case-insensitive title fragments; any fragment may match. Use `--all-courses` to include every visible course. The [Canvas CLI reference](/01-scraping/03-reference/03-command-line/#canvas-export) lists every option.
-|||
+The default output is `~/Downloads/canvas-export`. Use `--output=PATH` to change it. `--groups` accepts comma-separated, case-insensitive title fragments; any fragment may match. Use `--all-courses` to include every visible course. The [Canvas CLI reference](/01-scraping/03-reference/03-command-line/#canvas-export) lists every option. |||
 
-|||[TypeScript API]
-Use `scrapeCanvas` for the complete workflow when the package should own authentication, file paths, manifests, logging, and browser cleanup:
+|||[TypeScript API] Use `scrapeCanvas` for the complete workflow when the package should own authentication, file paths, manifests, logging, and browser cleanup:
 
 ```ts
 import { scrapeCanvas } from '@terra-symposium/scraping/canvas';
@@ -66,8 +64,7 @@ const result = await scrapeCanvas({
 console.log(result.output, result.manifest);
 ```
 
-The [Canvas API reference](/01-scraping/03-reference/01-canvas/) documents all options and return fields.
-|||
+The [Canvas API reference](/01-scraping/03-reference/01-canvas/) documents all options and return fields. |||
 
 ## Course and module selection
 
@@ -94,12 +91,12 @@ const session = await authenticateWorkflow({
 	sessionName: 'canvas',
 	headed: true,
 	interactive: true,
-	open: async (context) => {
+	open: async context => {
 		const page = await context.newPage();
 		await page.goto('https://canvas.example.edu/dashboard');
 		return page;
 	},
-	isReady: async (page) =>
+	isReady: async page =>
 		page
 			.locator('#context_modules, .ic-DashboardCard__link')
 			.first()

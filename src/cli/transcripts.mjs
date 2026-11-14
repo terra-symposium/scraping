@@ -344,14 +344,13 @@ function renderWeekBody(unique, week) {
 function renderTranscript(entry) {
 	const metadataLines = [];
 	for (const [key, value] of Object.entries(entry.metadata)) metadataLines.push(fmtMetadataField(key, value));
-	const header = [
+	return `${[
 		`Source: ${entry.source}`,
 		`SHA-256: ${entry.sha256}`,
 		`Week evidence: ${entry.weekMethod}${entry.inferredWeeks.length ? ` (${entry.inferredWeeks.join(', ')})` : ''}`,
 		`Provenance: ${entry.provenanceStatus}`,
 		...metadataLines,
-	].join('\n');
-	return `${header}\n\n${entry.text}`;
+	].join('\n')}\n\n${entry.text}`;
 }
 
 /**
@@ -363,37 +362,6 @@ function renderTranscript(entry) {
  */
 function fmtMetadataField(key, value) {
 	return `${key}: ${Array.isArray(value) ? value.join(', ') : value}`;
-}
-
-/**
- * Summarizes the files and week states emitted by the inventory run.
- *
- * @return {object} Counts and identifiers printed to stdout after writing reports.
- */
-function createSummary() {
-	let foundWeeks = 0;
-	const partialWeeks = [];
-	const missingWeeks = [];
-	let duplicates = 0;
-	for (const weekReport of report) {
-		if (weekReport.status === 'found') foundWeeks++;
-		if (weekReport.status === 'partial') partialWeeks.push(weekReport.week);
-		if (weekReport.status === 'missing') missingWeeks.push(weekReport.week);
-		duplicates += weekReport.duplicateSources.length;
-	}
-	const missingExpectedMeetings = [];
-	for (const meeting of manifest.missingExpectedMeetings) missingExpectedMeetings.push(meeting.id);
-	return {
-		output: outputRoot,
-		transcriptFiles: entries.length,
-		foundWeeks,
-		partialWeeks,
-		missingWeeks,
-		missingExpectedMeetings,
-		unmatchedSources: unmatchedSources.length,
-		readErrors: readErrs.length,
-		duplicates,
-	};
 }
 
 if (!inputArg || !outputArg || !Number.isInteger(weeks) || weeks < 1) {
@@ -568,4 +536,35 @@ for (let week = 1; week <= weeks; week++) {
 	await writeFile(path.join(outputRoot, `Week-${String(week).padStart(2, '0')}.txt`), body.endsWith('\n') ? body : `${body}\n`);
 }
 await writeFile(path.join(outputRoot, 'transcripts-manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
-console.log(JSON.stringify(createSummary(), null, 2));
+// Summarize written files and week states after the inventory completes.
+console.log(
+	JSON.stringify(
+		(() => {
+			let foundWeeks = 0;
+			const partialWeeks = [];
+			const missingWeeks = [];
+			let duplicates = 0;
+			for (const weekReport of report) {
+				if (weekReport.status === 'found') foundWeeks++;
+				if (weekReport.status === 'partial') partialWeeks.push(weekReport.week);
+				if (weekReport.status === 'missing') missingWeeks.push(weekReport.week);
+				duplicates += weekReport.duplicateSources.length;
+			}
+			const missingExpectedMeetings = [];
+			for (const meeting of manifest.missingExpectedMeetings) missingExpectedMeetings.push(meeting.id);
+			return {
+				output: outputRoot,
+				transcriptFiles: entries.length,
+				foundWeeks,
+				partialWeeks,
+				missingWeeks,
+				missingExpectedMeetings,
+				unmatchedSources: unmatchedSources.length,
+				readErrors: readErrs.length,
+				duplicates,
+			};
+		})(),
+		null,
+		2,
+	),
+);

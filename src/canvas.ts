@@ -133,119 +133,10 @@ function ignoreCanvasVisibilityFailure(): false {
 }
 
 /**
- * Writes a message through the default export logger.
- *
- * @param message - Sanitized export progress or error message.
- * @param failure - Whether the message describes a failure.
- */
-function defaultCanvasLogger(message: string, failure = false): void {
-	if (failure) console.error(message);
-	else console.log(message);
-}
-
-/**
  * Discards a progress or failure message when export logging is disabled.
  */
 function ignoreCanvasLog(): void {}
 
-/**
- * Extracts canonical course links from Canvas elements in a browser page.
- *
- * @param nodes - Matched dashboard or course-list elements.
- * @return Course titles and canonical URLs recognized from the links.
- */
-function readCanvasCourseLinks(nodes: Element[]): CanvasCourse[] {
-	const courses: CanvasCourse[] = [];
-	for (const node of nodes) {
-		const link = node as HTMLAnchorElement;
-		const url = new URL(link.href);
-		const match = url.pathname.match(/^\/courses\/(\d+)\/?$/);
-		if (!match) continue;
-		courses.push({
-			title:
-				link.querySelector('[data-testid="dashboard-card-title"]')?.getAttribute('title')?.trim() ||
-				link.getAttribute('title')?.trim() ||
-				link.textContent?.trim() ||
-				link.getAttribute('aria-label')?.trim() ||
-				`Course ${match[1]}`,
-			url: `${url.origin}/courses/${match[1]}`,
-		});
-	}
-	return courses;
-}
-
-/**
- * Extracts raw module headings and linked resources from Canvas DOM nodes.
- *
- * @param nodes - Canvas module elements selected in the browser page.
- * @return Module titles and resource labels before type classification.
- */
-function readRawCanvasGroups(nodes: Element[]): RawCanvasGroup[] {
-	const groups: RawCanvasGroup[] = [];
-	for (const node of nodes) {
-		const group: RawCanvasGroup = { title: node.querySelector('.name')?.textContent?.trim() || node.querySelector('h2')?.textContent?.trim() || '', items: [] };
-		for (const link of node.querySelectorAll<HTMLAnchorElement>('.ig-row a[href], .context_module_item a[href]')) {
-			group.items.push({ title: link.textContent?.trim() || 'Untitled resource', url: link.href, label: link.closest('.ig-row, .context_module_item')?.textContent || '' });
-		}
-		groups.push(group);
-	}
-	return groups;
-}
-
-/**
- * Checks whether the current URL has left Canvas's transient module-item route.
- *
- * @param url - Current Playwright page URL.
- * @return Whether the page has resolved to a non-module-item route.
- */
-function isCanvasNotModuleItemUrl(url: URL): boolean {
-	return !url.pathname.includes('/modules/items/');
-}
-
-/**
- * Detects readable Canvas body content while a page is loading.
- *
- * @return Whether one of Canvas's primary content containers has text.
- */
-function hasCanvasReadableContent(): boolean {
-	for (const selector of ['#content', '#wiki_page_show .show-content', '.show-content', 'main']) {
-		for (const element of document.querySelectorAll(selector)) {
-			if (element.textContent?.trim()) return true;
-		}
-	}
-	return false;
-}
-
-/**
- * Reads the visible Canvas content container with the most text.
- *
- * @return Trimmed body text, or an empty string when no readable content is present.
- */
-function readCanvasBodyText(): string {
-	let largestText = '';
-	for (const selector of ['#content', '#wiki_page_show .show-content', '.show-content', 'main']) {
-		for (const element of document.querySelectorAll<HTMLElement>(selector)) {
-			const text = element.innerText?.trim() || '';
-			if (text && element.getBoundingClientRect().height > 0 && text.length > largestText.length) largestText = text;
-		}
-	}
-	return largestText;
-}
-
-/**
- * Extracts link labels and absolute URLs from selected Canvas page elements.
- *
- * @param nodes - Anchors found inside the page content area.
- * @return Plain link records safe to classify in the Node process.
- */
-function readCanvasPageLinks(nodes: Element[]): RawCanvasLink[] {
-	const links: RawCanvasLink[] = [];
-	for (const node of nodes) {
-		const link = node as HTMLAnchorElement;
-		links.push({ title: link.textContent?.trim() || '', url: link.href });
-	}
-	return links;
-}
 /*//////////////////////////////////////////////////
 HELPERS
 //////////////////////////////////////////////////*/
@@ -471,11 +362,7 @@ export async function downloadCanvasFile(request: APIRequestContext, value: stri
  */
 export async function discoverCanvasCourses(page: Page, initialUrl: string, options: { includeAllCourses?: boolean; dashboardScope?: boolean } = {}): Promise<CanvasCourse[]> {
 	await page.waitForLoadState('networkidle').catch(ignoreCanvasWaitFailure);
-	await page
-		.locator('.ic-DashboardCard__link, .ic-DashboardCard a[href], a[href*="/courses/"]')
-		.first()
-		.waitFor({ state: 'attached', timeout: 15_000 })
-		.catch(ignoreCanvasWaitFailure);
+	await page.locator('.ic-DashboardCard__link, .ic-DashboardCard a[href], a[href*="/courses/"]').first().waitFor({ state: 'attached', timeout: 15_000 }).catch(ignoreCanvasWaitFailure);
 	/**
 	 * Reads course links matching one selector from the current page.
 	 *
@@ -483,7 +370,26 @@ export async function discoverCanvasCourses(page: Page, initialUrl: string, opti
 	 * @return Canonical course records extracted from those links.
 	 */
 	async function collectCourses(selector: string): Promise<CanvasCourse[]> {
-		return page.locator(selector).evaluateAll(readCanvasCourseLinks);
+		// Extracts canonical course links from Canvas elements in a browser page.
+		return page.locator(selector).evaluateAll(function (nodes: Element[]): CanvasCourse[] {
+			const courses: CanvasCourse[] = [];
+			for (const node of nodes) {
+				const link = node as HTMLAnchorElement;
+				const url = new URL(link.href);
+				const match = url.pathname.match(/^\/courses\/(\d+)\/?$/);
+				if (!match) continue;
+				courses.push({
+					title:
+						link.querySelector('[data-testid="dashboard-card-title"]')?.getAttribute('title')?.trim() ||
+						link.getAttribute('title')?.trim() ||
+						link.textContent?.trim() ||
+						link.getAttribute('aria-label')?.trim() ||
+						`Course ${match[1]}`,
+					url: `${url.origin}/courses/${match[1]}`,
+				});
+			}
+			return courses;
+		});
 	}
 	const dashboardCourses = await collectCourses('.ic-DashboardCard__link[href]');
 	let found = dashboardCourses.length ? dashboardCourses : await collectCourses('a[href]');
@@ -498,11 +404,7 @@ export async function discoverCanvasCourses(page: Page, initialUrl: string, opti
 	if (options.includeAllCourses) return [...uniqueCourses.values()];
 	const semesterCourses: CanvasCourse[] = [];
 	for (const course of uniqueCourses.values()) {
-		if (
-			/\b(?:(?:autumn|spring|summer|winter)\s+\d{4}|\d{4}\s+(?:autumn|spring|summer|winter)|(?:semester|term)\s+\d{1,2}\s+\d{4}|\d{4}\s+(?:semester|term)\s+\d{1,2})\b/i.test(
-				course.title,
-			)
-		)
+		if (/\b(?:(?:autumn|spring|summer|winter)\s+\d{4}|\d{4}\s+(?:autumn|spring|summer|winter)|(?:semester|term)\s+\d{1,2}\s+\d{4}|\d{4}\s+(?:semester|term)\s+\d{1,2})\b/i.test(course.title))
 			semesterCourses.push(course);
 	}
 	return semesterCourses;
@@ -518,7 +420,18 @@ export async function discoverCanvasCourses(page: Page, initialUrl: string, opti
  */
 export async function getCanvasModuleGroups(page: Page, matches: string[] = []): Promise<CanvasGroup[]> {
 	await page.locator('#context_modules').waitFor({ state: 'visible', timeout: 10_000 }).catch(ignoreCanvasWaitFailure);
-	const found = await page.locator('#context_modules .context_module').evaluateAll(readRawCanvasGroups);
+	// Extracts raw module headings and linked resources from Canvas DOM nodes.
+	const found = await page.locator('#context_modules .context_module').evaluateAll(function (nodes: Element[]): RawCanvasGroup[] {
+		const groups: RawCanvasGroup[] = [];
+		for (const node of nodes) {
+			const group: RawCanvasGroup = { title: node.querySelector('.name')?.textContent?.trim() || node.querySelector('h2')?.textContent?.trim() || '', items: [] };
+			for (const link of node.querySelectorAll<HTMLAnchorElement>('.ig-row a[href], .context_module_item a[href]')) {
+				group.items.push({ title: link.textContent?.trim() || 'Untitled resource', url: link.href, label: link.closest('.ig-row, .context_module_item')?.textContent || '' });
+			}
+			groups.push(group);
+		}
+		return groups;
+	});
 	const groups: CanvasGroup[] = [];
 	for (const group of found) {
 		if (matches.length) {
@@ -551,13 +464,57 @@ export async function getCanvasModuleGroups(page: Page, matches: string[] = []):
  */
 export async function readCanvasPage(page: Page, item: CanvasItem): Promise<{ text: string; files: CanvasItem[] }> {
 	await page.goto(item.url, { waitUntil: 'domcontentloaded' });
-	await page.waitForURL(isCanvasNotModuleItemUrl, { timeout: 30_000 }).catch(ignoreCanvasWaitFailure);
+	// Checks whether the current URL has left Canvas's transient module-item route.
+	await page
+		.waitForURL(
+			function (url: URL): boolean {
+				return !url.pathname.includes('/modules/items/');
+			},
+			{ timeout: 30_000 },
+		)
+		.catch(ignoreCanvasWaitFailure);
 	await page.waitForLoadState('networkidle').catch(ignoreCanvasWaitFailure);
-	await page.waitForFunction(hasCanvasReadableContent, null, { timeout: 30_000 }).catch(ignoreCanvasWaitFailure);
-	const bodyText = await page.evaluate(readCanvasBodyText);
+	// Detects readable Canvas body content while a page is loading.
+	await page
+		.waitForFunction(
+			function (): boolean {
+				for (const selector of ['#content', '#wiki_page_show .show-content', '.show-content', 'main']) {
+					for (const element of document.querySelectorAll(selector)) {
+						if (element.textContent?.trim()) return true;
+					}
+				}
+				return false;
+			},
+			null,
+			{ timeout: 30_000 },
+		)
+		.catch(ignoreCanvasWaitFailure);
+	// Reads the visible Canvas content container with the most text.
+	const bodyText = await page.evaluate(function (): string {
+		let largestText = '';
+		for (const selector of ['#content', '#wiki_page_show .show-content', '.show-content', 'main']) {
+			for (const element of document.querySelectorAll<HTMLElement>(selector)) {
+				const text = element.innerText?.trim() || '';
+				if (text && element.getBoundingClientRect().height > 0 && text.length > largestText.length) largestText = text;
+			}
+		}
+		return largestText;
+	});
 	if (!bodyText) throw new Error(`Canvas page returned no readable content after redirect to ${safeCanvasUrl(page.url())}.`);
 	const seen = new Set<string>();
-	const discoveredLinks = await page.locator('#content, #wiki_page_show .show-content, .show-content, main').first().locator('a[href]').evaluateAll(readCanvasPageLinks);
+	// Extracts link labels and absolute URLs from selected Canvas page elements.
+	const discoveredLinks = await page
+		.locator('#content, #wiki_page_show .show-content, .show-content, main')
+		.first()
+		.locator('a[href]')
+		.evaluateAll(function (nodes: Element[]): RawCanvasLink[] {
+			const links: RawCanvasLink[] = [];
+			for (const node of nodes) {
+				const link = node as HTMLAnchorElement;
+				links.push({ title: link.textContent?.trim() || '', url: link.href });
+			}
+			return links;
+		});
 	const files: CanvasItem[] = [];
 	for (const link of discoveredLinks) {
 		const fileUrl = canvasFileUrl(link.url);
@@ -689,11 +646,7 @@ export async function isCanvasReady(page: Page): Promise<boolean> {
 	if (/\/(?:login|saml|auth)(?:\/|$)/i.test(new URL(page.url()).pathname)) return false;
 	if (await page.locator('#context_modules').isVisible({ timeout: 1_000 }).catch(ignoreCanvasVisibilityFailure)) return true;
 	if (
-		await page
-			.locator('.ic-DashboardCard__link[href], .ic-DashboardCard a[href], a[href="/courses"], a[href^="/courses?"]')
-			.first()
-			.isVisible({ timeout: 1_000 })
-			.catch(ignoreCanvasVisibilityFailure)
+		await page.locator('.ic-DashboardCard__link[href], .ic-DashboardCard a[href], a[href="/courses"], a[href^="/courses?"]').first().isVisible({ timeout: 1_000 }).catch(ignoreCanvasVisibilityFailure)
 	)
 		return true;
 	const course = canvasCourseUrl(page.url());
@@ -723,26 +676,14 @@ export async function scrapeCanvas(options: CanvasScrapeOptions): Promise<Canvas
 	function log(message: string, failure = false): void {
 		const line = '[canvas-export] ' + sMessage(message);
 		logs.push(line);
-		(options.log || defaultCanvasLogger)(line, failure);
-	}
-	/**
-	 * Opens the requested Canvas URL and navigates directly to modules when scoped to a course.
-	 *
-	 * @param context - Authenticated Playwright context created by the shared workflow helper.
-	 * @return The initialized Canvas page.
-	 */
-	async function openCanvasPage(context: import('playwright').BrowserContext): Promise<Page> {
-		const page = await context.newPage();
-		await page.goto(source, { waitUntil: 'domcontentloaded' });
-		const directCourse = canvasCourseUrl(source);
-		if (directCourse) await page.goto(directCourse + '/modules', { waitUntil: 'domcontentloaded' });
-		return page;
-	}
-	/**
-	 * Announces that the user can complete Canvas sign-in in a visible browser.
-	 */
-	function notifyCanvasInteractiveStart(): void {
-		log('complete Canvas sign-in in the opened browser; session state is stored outside this repository');
+		// Writes a message through the default export logger.
+		(
+			options.log ||
+			function (message: string, failure = false): void {
+				if (failure) console.error(message);
+				else console.log(message);
+			}
+		)(line, failure);
 	}
 	let session: Awaited<ReturnType<typeof authenticateWorkflow<Page>>> | undefined;
 	try {
@@ -754,9 +695,15 @@ export async function scrapeCanvas(options: CanvasScrapeOptions): Promise<Canvas
 			interactive: options.interactive ?? headed,
 			timeoutMs: 15 * 60_000,
 			createSession: options.createSession,
-			open: openCanvasPage,
+			open: async (context: import('playwright').BrowserContext): Promise<Page> => {
+				const page = await context.newPage();
+				await page.goto(source, { waitUntil: 'domcontentloaded' });
+				const directCourse = canvasCourseUrl(source);
+				if (directCourse) await page.goto(directCourse + '/modules', { waitUntil: 'domcontentloaded' });
+				return page;
+			},
 			isReady: isCanvasReady,
-			onInteractiveStart: notifyCanvasInteractiveStart,
+			onInteractiveStart: () => log('complete Canvas sign-in in the opened browser; session state is stored outside this repository'),
 			authenticationRequiredMessage: 'Canvas sign-in is required. Rerun with --headed to sign in through a visible browser.',
 		});
 		const page = session.value;

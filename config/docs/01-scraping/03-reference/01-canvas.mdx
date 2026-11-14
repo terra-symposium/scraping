@@ -19,26 +19,23 @@ Import from `@terra-symposium/scraping/canvas` or the package root, `@terra-symp
 
 ## Choose the collection level
 
-|||[Managed full export]
-`scrapeCanvas(options: CanvasScrapeOptions): Promise<CanvasScrapeResult>` owns authentication, collection, output files, and browser cleanup.
+|||[Managed full export] `scrapeCanvas(options: CanvasScrapeOptions): Promise<CanvasScrapeResult>` owns authentication, collection, output files, and browser cleanup.
 
-| Field               | Type                                                                          | Default and behavior                                                                                                                                                                                      |
-| ------------------- | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `canvasUrl`         | `string`                                                                      | Required HTTP or HTTPS Canvas URL. A direct course URL exports that course; a dashboard or course list discovers courses. Credentials, query, and fragment are removed before the URL is stored.          |
-| `output`            | `string`                                                                      | `~/Downloads/canvas-export`. The resolved absolute directory receives the manifest, log, and course files.                                                                                                |
-| `groupMatches`      | `string[]`                                                                    | All module groups. When supplied, a group is included if its title contains any case-insensitive fragment.                                                                                                |
-| `storageStatePath`  | `string`                                                                      | OS-level Canvas workflow state file. Supply a path to select another Playwright state file.                                                                                                               |
-| `headed`            | `boolean`                                                                     | `false`. Show Chromium and keep the returned workflow in a visible browser.                                                                                                                               |
-| `interactive`       | `boolean`                                                                     | Defaults to `headed`. If readiness fails, permit visible manual sign-in. A headless run closes its initial session, opens a visible one, saves state, then reopens and verifies a fresh headless session. |
-| `includeAllCourses` | `boolean`                                                                     | `false`. Keep all visible courses rather than applying the default semester, term, or season plus year title filter.                                                                                      |
-| `createSession`     | `(options: WorkflowSessionFactoryOptions) => Promise<WorkflowBrowserSession>` | Optional browser-session factory for a consumer-specific channel, executable, or persistent profile. The shared workflow owns and closes the returned session.                                            |
-| `log`               | `(message: string, failure?: boolean) => void`                                | Optional progress callback. Receives `[canvas-export]` messages with sensitive URL parts removed. Progress goes to stdout and failures to stderr by default.                                              |
+| Field | Type | Default and behavior |
+| --- | --- | --- |
+| `canvasUrl` | `string` | Required HTTP or HTTPS Canvas URL. A direct course URL exports that course; a dashboard or course list discovers courses. Credentials, query, and fragment are removed before the URL is stored. |
+| `output` | `string` | `~/Downloads/canvas-export`. The resolved absolute directory receives the manifest, log, and course files. |
+| `groupMatches` | `string[]` | All module groups. When supplied, a group is included if its title contains any case-insensitive fragment. |
+| `storageStatePath` | `string` | OS-level Canvas workflow state file. Supply a path to select another Playwright state file. |
+| `headed` | `boolean` | `false`. Show Chromium and keep the returned workflow in a visible browser. |
+| `interactive` | `boolean` | Defaults to `headed`. If readiness fails, permit visible manual sign-in. A headless run closes its initial session, opens a visible one, saves state, then reopens and verifies a fresh headless session. |
+| `includeAllCourses` | `boolean` | `false`. Keep all visible courses rather than applying the default semester, term, or season plus year title filter. |
+| `createSession` | `(options: WorkflowSessionFactoryOptions) => Promise<WorkflowBrowserSession>` | Optional browser-session factory for a consumer-specific channel, executable, or persistent profile. The shared workflow owns and closes the returned session. |
+| `log` | `(message: string, failure?: boolean) => void` | Optional progress callback. Receives `[canvas-export]` messages with sensitive URL parts removed. Progress goes to stdout and failures to stderr by default. |
 
-The manifest includes the sanitized source URL, selected course titles and URLs, group summaries, and each `ExportedGroup` record. The `logs` array contains the sanitized progress and error lines written to `canvas-export.log`.
-|||
+The manifest includes the sanitized source URL, selected course titles and URLs, group summaries, and each `ExportedGroup` record. The `logs` array contains the sanitized progress and error lines written to `canvas-export.log`. |||
 
-|||[Compose with lower-level functions]
-`scrapeCanvasCourse(options: ScrapeCanvasCourseOptions): Promise<ExportedGroup[]>` requires:
+|||[Compose with lower-level functions] `scrapeCanvasCourse(options: ScrapeCanvasCourseOptions): Promise<ExportedGroup[]>` requires:
 
 | Field          | Type                                           | Purpose                                                                               |
 | -------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------- |
@@ -51,36 +48,13 @@ The manifest includes the sanitized source URL, selected course titles and URLs,
 
 `scrapeCanvasGroup` accepts `{ page, request, course, group, output, log? }`. Its `page` and `request` must come from the same authenticated `BrowserContext`. `group` is a `CanvasGroup`. This helper processes one group's resources but does not launch, authenticate, or close a browser.
 
-`scrapeCanvasCourse` navigates to the course's `/modules` route, discovers matching groups, and scrapes them sequentially. It returns an empty array when no groups match. Both lower-level functions preserve the caller's browser lifecycle.
-|||
+`scrapeCanvasCourse` navigates to the course's `/modules` route, discovers matching groups, and scrapes them sequentially. It returns an empty array when no groups match. Both lower-level functions preserve the caller's browser lifecycle. |||
 
-===[URL and file helpers]
-| Function | Behavior |
-| --- | --- |
-| `safeCanvasUrl(value: string): string` | Remove URL credentials, query, and fragment before storing or logging. For an unparsable value, strip its query and fragment suffix when possible. |
-| `normalizeCanvasUrl(value: string): string` | Parse and require HTTP or HTTPS, then remove credentials, query, and fragment. Invalid URLs and other protocols throw. |
-| `canvasCourseUrl(value: string)` | Return the canonical `/courses/{numeric-id}` URL when the path belongs to one course, including its subroutes, or `undefined` when it is not a course URL. |
-| `canvasFileUrl(value: string)` | Return the canonical `/courses/{course-id}/files/{file-id}` URL when recognized, or `undefined` for another route. |
-| `canvasFileDownloadUrl(value: string)` | Add Canvas's authenticated `/download?download_frd=1` endpoint to a recognized file URL, or return `undefined`. |
-| `canvasSourceKey(value: string): string` | Create a route identity from the lowercased origin, path without trailing slashes, and lowercased, decoded fragment. Query strings are ignored; malformed URLs or fragments throw. |
-| `isCanvasPreviewBody(body: Buffer, contentType: string): boolean` | Detect a Canvas HTML attachment preview by checking an HTML response and Canvas markers in its first 200 KB. |
-| `canvasResponseFileName(header?)` | Prefer decoded RFC 5987 `filename*`, then `filename` from Content-Disposition; return `undefined` when neither exists. |
-| `sanitizeCanvasFileName(value: string): string` | Keep only the basename, normalize it to a safe lowercase slug, and preserve a short alphanumeric extension. |
-| `inferCanvasFileName(fileName: string, contentType: string): string` | Correct known PDF, DOCX, PPTX, and image extensions from Content-Type; infer text, JSON, or NDJSON extensions where possible. |
-| `downloadCanvasFile(request: APIRequestContext, value: string): Promise<APIResponse>` | Request a file through Canvas's authenticated download route when recognized, with a 60-second request timeout. Inspect `response.ok()` and dispose the response after use. |
+===[URL and file helpers] | Function | Behavior | | --- | --- | | `safeCanvasUrl(value: string): string` | Remove URL credentials, query, and fragment before storing or logging. For an unparsable value, strip its query and fragment suffix when possible. | | `normalizeCanvasUrl(value: string): string` | Parse and require HTTP or HTTPS, then remove credentials, query, and fragment. Invalid URLs and other protocols throw. | | `canvasCourseUrl(value: string)` | Return the canonical `/courses/{numeric-id}` URL when the path belongs to one course, including its subroutes, or `undefined` when it is not a course URL. | | `canvasFileUrl(value: string)` | Return the canonical `/courses/{course-id}/files/{file-id}` URL when recognized, or `undefined` for another route. | | `canvasFileDownloadUrl(value: string)` | Add Canvas's authenticated `/download?download_frd=1` endpoint to a recognized file URL, or return `undefined`. | | `canvasSourceKey(value: string): string` | Create a route identity from the lowercased origin, path without trailing slashes, and lowercased, decoded fragment. Query strings are ignored; malformed URLs or fragments throw. | | `isCanvasPreviewBody(body: Buffer, contentType: string): boolean` | Detect a Canvas HTML attachment preview by checking an HTML response and Canvas markers in its first 200 KB. | | `canvasResponseFileName(header?)` | Prefer decoded RFC 5987 `filename*`, then `filename` from Content-Disposition; return `undefined` when neither exists. | | `sanitizeCanvasFileName(value: string): string` | Keep only the basename, normalize it to a safe lowercase slug, and preserve a short alphanumeric extension. | | `inferCanvasFileName(fileName: string, contentType: string): string` | Correct known PDF, DOCX, PPTX, and image extensions from Content-Type; infer text, JSON, or NDJSON extensions where possible. | | `downloadCanvasFile(request: APIRequestContext, value: string): Promise<APIResponse>` | Request a file through Canvas's authenticated download route when recognized, with a 60-second request timeout. Inspect `response.ok()` and dispose the response after use. |
 
 # The complete exporter validates response status, disposes each response, and rejects a Canvas HTML preview in place of attachment bytes. Direct callers of `downloadCanvasFile` must perform those checks themselves.
 
-===[Discovery and capture functions]
-| Function | Behavior |
-| --- | --- |
-| `discoverCanvasCourses(page, initialUrl, options?): Promise<CanvasCourse[]>` | Read and de-duplicate visible dashboard/course links. By default, keep titles with a season and year (for example, `Autumn 2026`) or semester/term number and year. `includeAllCourses` removes that filter. `dashboardScope` disables fallback navigation from a dashboard when no course links are found. |
-| `getCanvasModuleGroups(page, matches?: string[]): Promise<CanvasGroup[]>` | Read module groups on the current course page. A non-empty `matches` list keeps titles containing any case-insensitive fragment. Classify items as files, Canvas pages, or external links. |
-| `readCanvasPage(page, item): Promise<{ text: string; files: CanvasItem[] }>` | Open a Canvas page item and return its title, sanitized source URL, readable body text, and unique linked Canvas course files. Throws if no readable body is found. |
-| `isCanvasReady(page): Promise<boolean>` | Return false on login, SAML, or auth routes. Accept visible course/module content; for a course route, navigate to its modules page and check for module content. |
-| `scrapeCanvasGroup(options): Promise<ExportedGroup>` | Process unique module items, append page text, download Canvas files, list external links, and record per-item errors. Linked files inside captured pages are also downloaded. |
-| `scrapeCanvasCourse(options: ScrapeCanvasCourseOptions): Promise<ExportedGroup[]>` | Navigate to the course modules page, filter groups, and scrape selected groups sequentially. Returns an empty array when no groups match. |
-| `scrapeCanvas(options: CanvasScrapeOptions): Promise<CanvasScrapeResult>` | Own authentication and browser lifecycle, collect one direct course or selected visible courses, and write the manifest and log locally. |
+===[Discovery and capture functions] | Function | Behavior | | --- | --- | | `discoverCanvasCourses(page, initialUrl, options?): Promise<CanvasCourse[]>` | Read and de-duplicate visible dashboard/course links. By default, keep titles with a season and year (for example, `Autumn 2026`) or semester/term number and year. `includeAllCourses` removes that filter. `dashboardScope` disables fallback navigation from a dashboard when no course links are found. | | `getCanvasModuleGroups(page, matches?: string[]): Promise<CanvasGroup[]>` | Read module groups on the current course page. A non-empty `matches` list keeps titles containing any case-insensitive fragment. Classify items as files, Canvas pages, or external links. | | `readCanvasPage(page, item): Promise<{ text: string; files: CanvasItem[] }>` | Open a Canvas page item and return its title, sanitized source URL, readable body text, and unique linked Canvas course files. Throws if no readable body is found. | | `isCanvasReady(page): Promise<boolean>` | Return false on login, SAML, or auth routes. Accept visible course/module content; for a course route, navigate to its modules page and check for module content. | | `scrapeCanvasGroup(options): Promise<ExportedGroup>` | Process unique module items, append page text, download Canvas files, list external links, and record per-item errors. Linked files inside captured pages are also downloaded. | | `scrapeCanvasCourse(options: ScrapeCanvasCourseOptions): Promise<ExportedGroup[]>` | Navigate to the course modules page, filter groups, and scrape selected groups sequentially. Returns an empty array when no groups match. | | `scrapeCanvas(options: CanvasScrapeOptions): Promise<CanvasScrapeResult>` | Own authentication and browser lifecycle, collect one direct course or selected visible courses, and write the manifest and log locally. |
 
 # The default course-title filter recognizes a season followed by a four-digit year (or year before season), and semester/term followed by a one- or two-digit number and a four-digit year (or year before semester/term and number). A direct course URL is handled as one course without that title filter. A URL pointing into a course is normalized to its `/modules` page.
 

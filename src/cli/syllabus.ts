@@ -35,13 +35,6 @@ function option(name: string): string | undefined {
 	return index >= 0 ? args[index + 1] : undefined;
 }
 
-/**
- * Announces that an interactive sign-in window is ready for the user.
- */
-function notifyInteractiveSignIn(): void {
-	console.log('Complete sign-in in the visible browser window.');
-}
-
 /*//////////////////////////////////////////////////
 HELPERS
 //////////////////////////////////////////////////*/
@@ -74,7 +67,7 @@ Options:
 					interactive: args.includes('--interactive') || args.includes('--headed'),
 					storageStatePath: option('storage-state'),
 					...(Number.isSafeInteger(timeoutMs) && timeoutMs > 0 ? { timeoutMs } : {}),
-					onInteractiveStart: notifyInteractiveSignIn,
+					onInteractiveStart: () => console.log('Complete sign-in in the visible browser window.'),
 				}),
 				null,
 				2,

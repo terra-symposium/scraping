@@ -85,12 +85,12 @@ const session = await authenticateWorkflow({
 	sessionName: 'course-workflow',
 	headed: false,
 	interactive: true,
-	open: async (context) => {
+	open: async context => {
 		const page = await context.newPage();
 		await page.goto('https://example.edu/courses');
 		return page;
 	},
-	isReady: async (page) =>
+	isReady: async page =>
 		page
 			.locator('[data-course-list]')
 			.isVisible()
@@ -98,7 +98,7 @@ const session = await authenticateWorkflow({
 });
 
 try {
-	const failures = await runQueued(['course-1', 'course-2'], resolveWorkerCount(2, 'courses'), async (course) => collectCourse(course, session.value));
+	const failures = await runQueued(['course-1', 'course-2'], resolveWorkerCount(2, 'courses'), async course => collectCourse(course, session.value));
 	console.log(failures);
 } finally {
 	await session.close();

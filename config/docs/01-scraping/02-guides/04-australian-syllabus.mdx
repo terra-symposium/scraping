@@ -8,7 +8,7 @@ The syllabus workflow downloads a Word file from one configured Australian state
 ## Download flow
 
 <Nodes
-	direction="TB"
+	direction='TB'
 	height={500}
 	nodes={`[
     {"id":"state","type":"origin","data":{"title":"Choose a state or territory"}},
@@ -34,16 +34,16 @@ The syllabus workflow downloads a Word file from one configured Australian state
 
 The URLs are configured in `AUSTRALIAN_SYLLABUS_SOURCES`:
 
-| Code | Curriculum page                                                                                                                                                                    | Special handling                                             |
-| ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| ACT  | [ACT curriculum](https://www.act.gov.au/education-and-training/teaching-and-assessment/what-we-teach-curriculum#High-school-years-7-to-10-)                                        | Opens the configured public curriculum page.                 |
-| NSW  | [NSW Curriculum](https://curriculum.nsw.edu.au/custom)                                                                                                                             | Searches the custom picker; defaults to English K–10 (2022). |
-| NT   | [NT curriculum policy](https://education.nt.gov.au/policies/curriculum)                                                                                                            | Opens the configured public curriculum page.                 |
-| QLD  | [Queensland P–10 resources](https://www.qcaa.qld.edu.au/p-10/aciq/version-8/p-10-resources-search)                                                                                 | Opens the configured resources page.                         |
-| SA   | [South Australian Birth to Year 10 curriculum](https://www.education.sa.gov.au/students/curriculum-and-learning/curriculum-birth-year-10#schooling-%E2%80%93-reception-to-year-10) | Opens the configured public curriculum page.                 |
-| TAS  | [Tasmanian curriculum](https://www.decyp.tas.gov.au/learning/primary-school-to-year-12/curriculum/)                                                                                | Opens the configured public curriculum page.                 |
-| VIC  | [Victorian Foundation to 10 resources](https://www.vcaa.vic.edu.au/curriculum/foundation-10/curriculum-area-resources/curriculum-area-resources-0)                                 | Opens the configured public curriculum page.                 |
-| WA   | [WA K–10 curriculum browser](https://k10outline.scsa.wa.edu.au/home/teaching/curriculum-browser)                                                                                   | Opens the configured public curriculum page.                 |
+| Code | Curriculum page | Special handling |
+| --- | --- | --- |
+| ACT | [ACT curriculum](https://www.act.gov.au/education-and-training/teaching-and-assessment/what-we-teach-curriculum#High-school-years-7-to-10-) | Opens the configured public curriculum page. |
+| NSW | [NSW Curriculum](https://curriculum.nsw.edu.au/custom) | Searches the custom picker; defaults to English K–10 (2022). |
+| NT | [NT curriculum policy](https://education.nt.gov.au/policies/curriculum) | Opens the configured public curriculum page. |
+| QLD | [Queensland P–10 resources](https://www.qcaa.qld.edu.au/p-10/aciq/version-8/p-10-resources-search) | Opens the configured resources page. |
+| SA | [South Australian Birth to Year 10 curriculum](https://www.education.sa.gov.au/students/curriculum-and-learning/curriculum-birth-year-10#schooling-%E2%80%93-reception-to-year-10) | Opens the configured public curriculum page. |
+| TAS | [Tasmanian curriculum](https://www.decyp.tas.gov.au/learning/primary-school-to-year-12/curriculum/) | Opens the configured public curriculum page. |
+| VIC | [Victorian Foundation to 10 resources](https://www.vcaa.vic.edu.au/curriculum/foundation-10/curriculum-area-resources/curriculum-area-resources-0) | Opens the configured public curriculum page. |
+| WA | [WA K–10 curriculum browser](https://k10outline.scsa.wa.edu.au/home/teaching/curriculum-browser) | Opens the configured public curriculum page. |
 
 All current adapters use a visible control named Download as Word. NSW is prepared through its custom picker first. Public sites can change their URLs, page structure, or available files; inspect the visible page and update the adapter if the expected control is missing.
 
@@ -57,8 +57,7 @@ The default output directory is `~/Downloads/terra-symposium-scraping/syllabuses
 pnpm exec syllabus-fetch --state=NSW --headed --output=/path/to/syllabuses
 ```
 
-The CLI supports `--state`, `--output`, `--file-name`, `--syllabus-name`, `--headed`, `--interactive`, `--storage-state`, and `--timeout`. Run `syllabus-fetch --help` for exact flags and defaults. The command prints the `FetchedAustralianSyllabus` result as JSON.
-|||
+The CLI supports `--state`, `--output`, `--file-name`, `--syllabus-name`, `--headed`, `--interactive`, `--storage-state`, and `--timeout`. Run `syllabus-fetch --help` for exact flags and defaults. The command prints the `FetchedAustralianSyllabus` result as JSON. |||
 
 |||[TypeScript API]
 
@@ -74,8 +73,7 @@ const syllabus = await fetchAustralianSyllabus({
 console.log(syllabus.filePath);
 ```
 
-The result includes the state code, sanitized source URL, absolute file path, saved basename, and ISO `capturedAt` timestamp.
-|||
+The result includes the state code, sanitized source URL, absolute file path, saved basename, and ISO `capturedAt` timestamp. |||
 
 The fetch workflow is headless and non-interactive by default. Setting `headed: true` requests a visible browser and allows sign-in unless `interactive` is explicitly false. Set `interactive: true` with headed omitted or false to start headlessly and open a browser only if the page is not ready. Each jurisdiction uses a separate state-file name outside the repository.
 
@@ -100,9 +98,7 @@ const normalized = await normalizeSyllabusDocument('/path/to/download.zip', {
 
 The default output directory is the same Downloads folder used by the fetch workflow. The result includes the absolute `filePath`, `fileName`, and original absolute `sourcePath`. ZIP results also include the selected `archiveEntry` path. A ZIP without a matching Word document throws. The helper does not unpack the rest of the archive, convert Word formats, or change the source file.
 
-===[ZIP selection rule]
-For ZIP input, the helper chooses the first alphabetically sorted `.doc` or `.docx` entry whose path does not contain “syllabus support”. Only that document is extracted.
-===
+===[ZIP selection rule] For ZIP input, the helper chooses the first alphabetically sorted `.doc` or `.docx` entry whose path does not contain “syllabus support”. Only that document is extracted. ===
 
 `prepareAustralianSyllabusPage(page, state, options)` navigates the given Playwright page when it is not already on the configured source page. For NSW, it selects `options.syllabusName` or the configured default and prepares the curriculum checkboxes. Other jurisdictions currently keep the configured page as-is.
 

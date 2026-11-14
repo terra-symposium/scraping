@@ -31,6 +31,12 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --dir config install --frozen-lockfile
       - name: Run full-scope Quality
-        run: pnpm run quality:check
+        run: pnpm run quality:all
+      - name: Require committed Quality fixes
+        run: git diff --exit-code
         env:
           GH_TOKEN: ${{ github.token }}
+      - name: Build
+        run: pnpm run build
+      - name: Test
+        run: pnpm run test

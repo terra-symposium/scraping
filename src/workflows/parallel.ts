@@ -182,15 +182,12 @@ export async function acquireWorkflowSlot(options: WorkflowSlotOptions): Promise
 				await handle.writeFile(`${process.pid}\n`);
 				await handle.close();
 				let released = false;
-				/**
-				 * Removes the lock file once, releasing this workflow slot.
-				 */
-				async function releaseSlot(): Promise<void> {
+				// Release the lock file at most once.
+				return async (): Promise<void> => {
 					if (released) return;
 					released = true;
 					await rm(filePath, { force: true });
-				}
-				return releaseSlot;
+				};
 			} catch (cause) {
 				if (typeof cause !== 'object' || !cause || !('code' in cause) || cause.code !== 'EEXIST') throw cause;
 				let lockContents = '';

@@ -10,7 +10,7 @@ The browser helpers centralize Chromium launch, Playwright storage-state reuse, 
 `headed` selects the requested browser mode. `interactive` controls whether a visible browser may repair an unreadable saved session. The helper saves state after readiness succeeds and returns an open session to its caller.
 
 <Nodes
-	direction="TB"
+	direction='TB'
 	height={600}
 	nodes={`[
     {"id":"open","type":"origin","data":{"title":"Open requested browser mode"}},
@@ -35,17 +35,11 @@ The browser helpers centralize Chromium launch, Playwright storage-state reuse, 
   ]`}
 />
 
-|||[Headless automation]
-Set `headed: false` and leave `interactive` false (the default) to reuse saved state without opening a window. If the app is not ready, the helper closes the session and throws.
-|||
+|||[Headless automation] Set `headed: false` and leave `interactive` false (the default) to reuse saved state without opening a window. If the app is not ready, the helper closes the session and throws. |||
 
-|||[Headless with sign-in recovery]
-Set `headed: false` and `interactive: true`. The helper tries headlessly first. If readiness fails, it opens a visible browser for sign-in, saves state, closes that browser, then launches and verifies a fresh headless session.
-|||
+|||[Headless with sign-in recovery] Set `headed: false` and `interactive: true`. The helper tries headlessly first. If readiness fails, it opens a visible browser for sign-in, saves state, closes that browser, then launches and verifies a fresh headless session. |||
 
-|||[Visible session]
-Set `headed: true`. `interactive` defaults to true, so a visible session can wait for sign-in and remains open when returned. Set `interactive: false` to require existing state; an unreadable session then closes and throws.
-|||
+|||[Visible session] Set `headed: true`. `interactive` defaults to true, so a visible session can wait for sign-in and remains open when returned. Set `interactive: false` to require existing state; an unreadable session then closes and throws. |||
 
 The default interactive-authentication timeout is 15 minutes. Readiness is polled at intervals of up to one second. `onInteractiveStart` runs just before the user must finish sign-in.
 
@@ -76,12 +70,12 @@ const session = await authenticateWorkflow({
 	sessionName: 'course-notes',
 	headed: false,
 	interactive: true,
-	open: async (context) => {
+	open: async context => {
 		const page = await context.newPage();
 		await page.goto('https://example.edu/courses');
 		return page;
 	},
-	isReady: async (page) =>
+	isReady: async page =>
 		page
 			.locator('[data-course-list]')
 			.isVisible()
@@ -118,8 +112,7 @@ If `userDataDir` is set, the helper launches a persistent browser context. `clos
 
 Authentication state can contain live credentials or session tokens. Keep it private and out of Git, shared backups, and exported course data. Use a separate `sessionName` for each service or account. The helper creates the state directory and restricts the directory and saved file to the owner where supported.
 
-===[Default storage-state paths]
-When `storageStatePath` is omitted, the helper sanitizes `sessionName` and uses an OS-level path outside the repository:
+===[Default storage-state paths] When `storageStatePath` is omitted, the helper sanitizes `sessionName` and uses an OS-level path outside the repository:
 
 - macOS: `~/Library/Application Support/Terra Symposium/Workflows/session-name/storage-state.json`
 - Other platforms: `~/.config/terra-symposium/workflows/session-name/storage-state.json`

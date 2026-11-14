@@ -9,30 +9,21 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { URL } from 'node:url';
 import { acquireWorkflowSlot, resolveWorkerCount, runQueued } from '../dist/workflows/parallel.js';
 
-/**
- * Confirms worker-count overrides keep their documented precedence and validation.
- */
-function resolvesWorkerOverrides() {
+// Confirms worker-count overrides keep their documented precedence and validation.
+test('worker count resolves CLI, domain, environment, and fallback values', () => {
 	assert.equal(resolveWorkerCount(3, 'courses', { argv: ['node', 'script', '--workers=2'], env: { PW_COURSES_WORKERS: '4' } }), 2);
 	assert.equal(resolveWorkerCount(3, 'courses', { argv: ['node', 'script', '--workers', '5'], env: { PW_COURSES_WORKERS: '4' } }), 5);
 	assert.equal(resolveWorkerCount(3, 'courses', { argv: ['node', 'script'], env: { PW_COURSES_WORKERS: '4', PW_WORKERS: '6' } }), 4);
 	assert.equal(resolveWorkerCount(3, undefined, { argv: ['node', 'script'], env: { PW_WORKERS: '0' } }), 3);
 	assert.equal(resolveWorkerCount(0, undefined, { argv: ['node', 'script'], env: {} }), 1);
-}
-
-/**
- * Verifies queue workers respect their limit and return failures in input order.
- */
-async function runsBoundedQueueWork() {
+});
+// Verifies queue workers respect their limit and return failures in input order.
+test('queued work stays bounded and sorts worker failures by input index', async () => {
 	let aWorkers = 0;
 	let maximumWorkers = 0;
 	const completed = [];
-	/** Executes one queued fixture item and records its active interval.
-	 * @param item Queue item to execute.
-	 * @param index Original position in the queue.
-	 * @returns Resolves after the item completes or rejects with its expected failure.
-	 */
-	async function executeItem(item, index) {
+	// terra-quality-ignore single-use -- Await the queue before asserting its observed concurrency and completion order.
+	const failures = await runQueued([0, 1, 2, 3], 2, async (item, index) => {
 		aWorkers++;
 		maximumWorkers = Math.max(maximumWorkers, aWorkers);
 		try {
@@ -42,29 +33,16 @@ async function runsBoundedQueueWork() {
 		} finally {
 			aWorkers--;
 		}
-	}
-
-	const failures = await runQueued([0, 1, 2, 3], 2, executeItem);
+	});
 	assert.equal(maximumWorkers, 2);
 	assert.deepEqual(completed, [0]);
-	assert.deepEqual(failures.map(failureIndex), [1, 2, 3]);
-}
-
-/**
- * Reads an input index from a queued worker failure.
- *
- * @param f Queue failure to inspect.
- *
- * @return Original input index.
- */
-function failureIndex(f) {
-	return f.index;
-}
-
-/**
- * Confirms a workflow slot can be cancelled while occupied and released more than once.
- */
-async function releasesWorkflowSlots() {
+	assert.deepEqual(
+		failures.map(f => f.index),
+		[1, 2, 3],
+	);
+});
+// Confirms a workflow slot can be cancelled while occupied and released more than once.
+test('workflow slots release idempotently and honor cancellation', async () => {
 	const dir = await mkdtemp(path.join(os.tmpdir(), 'terra-workflow-slot-'));
 	try {
 		const release = await acquireWorkflowSlot({ name: 'parallel-test', size: 1, directory: dir, pollMs: 1 });
@@ -73,26 +51,24 @@ async function releasesWorkflowSlots() {
 		await assert.rejects(acquireWorkflowSlot({ name: 'parallel-test', size: 1, directory: dir, signal: controller.signal }), /cancelled/u);
 		await release();
 		await release();
-		const releaseAgain = await acquireWorkflowSlot({ name: 'parallel-test', size: 1, directory: dir, pollMs: 1 });
-		await releaseAgain();
+		await (
+			await acquireWorkflowSlot({ name: 'parallel-test', size: 1, directory: dir, pollMs: 1 })
+		)();
 	} finally {
 		await rm(dir, { recursive: true, force: true });
 	}
-}
-
-test('worker count resolves CLI, domain, environment, and fallback values', resolvesWorkerOverrides);
-test('queued work stays bounded and sorts worker failures by input index', runsBoundedQueueWork);
-test('workflow slots release idempotently and honor cancellation', releasesWorkflowSlots);
+});
 
 test('workflow slots serialize acquisitions across processes', async () => {
 	const root = await mkdtemp(path.join(os.tmpdir(), 'terra-workflow-process-lock-'));
+	// terra-quality-ignore single-use -- Both child workers receive the same lock directory captured before launch.
 	const lockDir = path.join(root, 'locks');
 	const eventPath = path.join(root, 'events.txt');
-	const moduleUrl = new URL('../dist/workflows/parallel.js', import.meta.url).href;
+	// terra-quality-ignore single-use -- Both child processes execute the same precomputed fixture source.
 	const source = `
 		import { appendFile } from 'node:fs/promises';
 		import { setTimeout as delay } from 'node:timers/promises';
-		import { acquireWorkflowSlot } from ${JSON.stringify(moduleUrl)};
+		import { acquireWorkflowSlot } from ${JSON.stringify(new URL('../dist/workflows/parallel.js', import.meta.url).href)};
 		const [lockDir, eventPath, workerId] = process.argv.slice(1);
 		const release = await acquireWorkflowSlot({ name: 'parallel-test', size: 1, directory: lockDir, pollMs: 2 });
 		try {
@@ -107,7 +83,7 @@ test('workflow slots serialize acquisitions across processes', async () => {
 	 * @param id Label written to the process event log.
 	 * @returns A promise that settles when the child process exits successfully.
 	 */
-	const runWorker = (id) =>
+	const runWorker = id =>
 		new Promise((resolve, reject) => {
 			const worker = spawn(process.execPath, ['--input-type=module', '--eval', source, lockDir, eventPath, id], { stdio: 'ignore' });
 			worker.once('error', reject);

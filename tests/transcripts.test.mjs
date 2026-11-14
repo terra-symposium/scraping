@@ -63,7 +63,7 @@ test('transcript inventory reports coverage and removes URL secrets from mapped 
 		assert.equal(result.status, 0, result.stderr);
 		const manifestText = await readFile(path.join(output, 'transcripts-manifest.json'), 'utf8');
 		const manifest = JSON.parse(manifestText);
-		const lecture = manifest.weeks[0].files.find((file) => file.source === 'Week 01/Lecture 01 transcript.txt');
+		const lecture = manifest.weeks[0].files.find(file => file.source === 'Week 01/Lecture 01 transcript.txt');
 		assert.equal(manifest.transcriptFileCount, 3);
 		assert.equal(lecture.mappingMatch, 'relative-path');
 		assert.equal(lecture.metadata.recordingUrl, 'https://example.edu/watch');
@@ -74,7 +74,7 @@ test('transcript inventory reports coverage and removes URL secrets from mapped 
 		assert.equal(manifest.weeks[1].status, 'partial');
 		assert.equal(manifest.missingExpectedMeetings[0].id, 'missing-02');
 		assert.equal(
-			manifest.unmatchedSources.some((source) => source.source.endsWith('Week 03 notes.md')),
+			manifest.unmatchedSources.some(source => source.source.endsWith('Week 03 notes.md')),
 			false,
 		);
 		assert.doesNotMatch(manifestText, /user:password|token=private|#session|must not be copied/u);

@@ -21,28 +21,30 @@ test('interactive authentication saves state and returns in the requested browse
 			timeoutMs: 100,
 			createSession: async ({ headed }) => {
 				headedModes.push(headed);
-				const authenticated =
-					headed ||
-					(await access(storageStatePath).then(
-						() => true,
-						() => false,
-					));
-				const context = {
-					authenticated,
-					/**
-					 * Writes the simulated browser's authentication state to the requested file.
-					 *
-					 * @param target - Destination file requested by the workflow.
-					 */
-					async storageState({ path: target }) {
-						await mkdir(path.dirname(target), { recursive: true });
-						await writeFile(target, JSON.stringify({ cookies: [], origins: [] }));
+				return {
+					browser: {},
+					context: {
+						authenticated:
+							headed ||
+							(await access(storageStatePath).then(
+								() => true,
+								() => false,
+							)),
+						/**
+						 * Writes the simulated browser's authentication state to the requested file.
+						 *
+						 * @param target - Destination file requested by the workflow.
+						 */
+						async storageState({ path: target }) {
+							await mkdir(path.dirname(target), { recursive: true });
+							await writeFile(target, JSON.stringify({ cookies: [], origins: [] }));
+						},
 					},
+					close: async () => closedModes.push(headed),
 				};
-				return { browser: {}, context, close: async () => closedModes.push(headed) };
 			},
-			open: async (context) => context,
-			isReady: async (context) => context.authenticated,
+			open: async context => context,
+			isReady: async context => context.authenticated,
 			onInteractiveStart: () => {
 				interactiveStarts++;
 			},
@@ -75,7 +77,7 @@ test('non-interactive authentication rejects invalid state and closes its sessio
 				storageStatePath: path.join(root, 'storage-state.json'),
 				authenticationRequiredMessage: 'Sign-in is required.',
 				createSession: async () => ({ browser: {}, context: { storageState: async () => (storageSaved = true) }, close: async () => closed++ }),
-				open: async (context) => context,
+				open: async context => context,
 				isReady: async () => false,
 			}),
 			/Sign-in is required\./u,
@@ -102,7 +104,7 @@ test('authentication closes a created session when opening the workflow fails', 
 				},
 				isReady: async () => true,
 			}),
-			(error) => error === openingErr,
+			error => error === openingErr,
 		);
 		assert.equal(closed, 1);
 	} finally {
@@ -110,7 +112,7 @@ test('authentication closes a created session when opening the workflow fails', 
 	}
 });
 
-test('default authentication loads saved state, saves private state, and closes Chromium once', async (t) => {
+test('default authentication loads saved state, saves private state, and closes Chromium once', async t => {
 	const root = await mkdtemp(path.join(os.tmpdir(), 'terra-browser-default-'));
 	const storageStatePath = path.join(root, 'private', 'state.json');
 	await mkdir(path.dirname(storageStatePath), { recursive: true });
@@ -127,14 +129,15 @@ test('default authentication loads saved state, saves private state, and closes 
 		},
 		close: async () => contextCloseCount++,
 	};
+	// terra-quality-ignore single-use -- The mock returns one captured browser object whose close count is observed after authentication.
 	const browser = {
-		newContext: async (options) => {
+		newContext: async options => {
 			contextOptions = options;
 			return context;
 		},
 		close: async () => browserCloseCount++,
 	};
-	t.mock.method(chromium, 'launch', async (options) => {
+	t.mock.method(chromium, 'launch', async options => {
 		launchOptions = options;
 		return browser;
 	});
@@ -142,8 +145,8 @@ test('default authentication loads saved state, saves private state, and closes 
 		const session = await authenticateWorkflow({
 			sessionName: 'default-browser-test',
 			storageStatePath,
-			open: async (openedContext) => openedContext,
-			isReady: async (openedContext) => openedContext === context,
+			open: async openedContext => openedContext,
+			isReady: async openedContext => openedContext === context,
 		});
 
 		assert.deepEqual(launchOptions, { headless: true });

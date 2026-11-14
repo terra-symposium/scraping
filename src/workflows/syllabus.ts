@@ -146,7 +146,11 @@ export async function prepareAustralianSyllabusPage(page: Page, state: Australia
 		const checkbox = checkboxes.nth(index);
 		if (!(await checkbox.isDisabled()) && !(await checkbox.isChecked())) await checkbox.click({ force: true });
 	}
-	await page.locator('.tree-picker-id-content input').first().check({ force: true }).catch(ignoreSyllabusFailure);
+	await page
+		.locator('.tree-picker-id-content input')
+		.first()
+		.check({ force: true })
+		.catch(() => undefined);
 	return page;
 }
 
@@ -171,15 +175,6 @@ function sFileName(value: string): string {
 }
 
 /**
- * Absorbs a best-effort page cleanup or locator failure.
- *
- * @return `undefined` so callers can continue with optional controls.
- */
-function ignoreSyllabusFailure(): undefined {
-	return undefined;
-}
-
-/**
  * Compares syllabus archive entries by their stored paths.
  *
  * @param l - First archive entry.
@@ -191,34 +186,6 @@ function compArchiveEntryNames(l: { entryName: string }, r: { entryName: string 
 }
 
 /**
- * Checks whether the syllabus page body is visible, treating a locator timeout as not ready.
- *
- * @param page - Curriculum page whose body is being checked.
- * @return Whether the body locator was visible within one second.
- */
-async function isSyllabusBodyVisible(page: Page): Promise<boolean> {
-	try {
-		return await page.locator('body').isVisible({ timeout: 1_000 });
-	} catch {
-		return false;
-	}
-}
-
-/**
- * Reads syllabus body text when available, treating a detached or unavailable body as empty.
- *
- * @param page - Curriculum page whose body is being read.
- * @return Body text, or an empty string when reading fails.
- */
-async function readSyllabusBodyText(page: Page): Promise<string> {
-	try {
-		return await page.locator('body').innerText();
-	} catch {
-		return '';
-	}
-}
-
-/**
  * Checks whether a curriculum page is public and contains readable content.
  *
  * @param page - Playwright page to inspect after opening or restoring browser state.
@@ -227,8 +194,17 @@ async function readSyllabusBodyText(page: Page): Promise<string> {
  */
 export async function isAustralianSyllabusPageReady(page: Page): Promise<boolean> {
 	if (/login|saml|auth|signin/i.test(new URL(page.url()).pathname)) return false;
-	if (!(await isSyllabusBodyVisible(page))) return false;
-	const text = await readSyllabusBodyText(page);
+	if (
+		!(await page
+			.locator('body')
+			.isVisible({ timeout: 1_000 })
+			.catch(() => false))
+	)
+		return false;
+	const text = await page
+		.locator('body')
+		.innerText()
+		.catch(() => '');
 	return text.trim().length > 0 && !/sign in to continue|authentication required/i.test(text.slice(0, 2_000));
 }
 
@@ -243,30 +219,6 @@ export async function fetchAustralianSyllabus(options: FetchAustralianSyllabusOp
 	const source = AUSTRALIAN_SYLLABUS_SOURCES[options.state];
 	if (!source) throw new Error(`No curriculum source is configured for ${options.state}.`);
 	const timeoutMs = options.timeoutMs || 30_000;
-	/**
-	 * Opens the selected jurisdiction's page in the authenticated browser context.
-	 *
-	 * @param context - Playwright context already configured by the shared workflow session.
-	 * @return The page after its initial curriculum navigation.
-	 */
-	async function openSyllabusPage(context: import('playwright').BrowserContext): Promise<Page> {
-		const page = await context.newPage();
-		await page.goto(source.url, { waitUntil: 'domcontentloaded' });
-		return page;
-	}
-	/**
-	 * Waits for the jurisdiction page to start its Word download and reports a useful timeout.
-	 *
-	 * @param page - Prepared curriculum page.
-	 * @return The Playwright download event.
-	 */
-	async function waitForSyllabusDownload(page: Page) {
-		try {
-			return await page.waitForEvent('download', { timeout: timeoutMs });
-		} catch (cause) {
-			throw new Error(`The ${options.state} curriculum page did not start a Word download.`, { cause });
-		}
-	}
 	const session = await authenticateWorkflow<Page>({
 		sessionName: `syllabus-${options.state.toLowerCase()}`,
 		storageStatePath: options.storageStatePath || resolveWorkflowStorageStatePath(`syllabus-${options.state.toLowerCase()}`),
@@ -274,14 +226,23 @@ export async function fetchAustralianSyllabus(options: FetchAustralianSyllabusOp
 		interactive: options.interactive ?? options.headed ?? false,
 		timeoutMs: options.timeoutMs || 15 * 60_000,
 		createSession: options.createSession,
-		open: openSyllabusPage,
+		open: async (context: import('playwright').BrowserContext): Promise<Page> => {
+			const page = await context.newPage();
+			await page.goto(source.url, { waitUntil: 'domcontentloaded' });
+			return page;
+		},
 		isReady: isAustralianSyllabusPageReady,
 		onInteractiveStart: options.onInteractiveStart,
 		authenticationRequiredMessage: 'The curriculum page requires sign-in. Retry with a headed interactive session.',
 	});
 	try {
 		const page = await prepareAustralianSyllabusPage(session.value, options.state, options);
-		const [download] = await Promise.all([waitForSyllabusDownload(page), page.getByRole('button', { name: /download as word/i }).click({ timeout: timeoutMs })]);
+		const [download] = await Promise.all([
+			page.waitForEvent('download', { timeout: timeoutMs }).catch((cause: unknown) => {
+				throw new Error(`The ${options.state} curriculum page did not start a Word download.`, { cause });
+			}),
+			page.getByRole('button', { name: /download as word/i }).click({ timeout: timeoutMs }),
+		]);
 		const fileName = sFileName(options.fileName || download.suggestedFilename());
 		const outputDir = path.resolve(options.outputDirectory || path.join(os.homedir(), 'Downloads', 'terra-symposium-scraping', 'syllabuses'));
 		await mkdir(outputDir, { recursive: true, mode: 0o700 });

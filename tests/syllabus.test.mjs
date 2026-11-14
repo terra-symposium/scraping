@@ -5,29 +5,20 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import AdmZip from 'adm-zip';
-import {
-	AUSTRALIAN_SYLLABUS_SOURCES,
-	fetchAustralianSyllabus,
-	isAustralianSyllabusPageReady,
-	normalizeSyllabusDocument,
-	prepareAustralianSyllabusPage,
-} from '../dist/workflows/syllabus.js';
+import { AUSTRALIAN_SYLLABUS_SOURCES, fetchAustralianSyllabus, isAustralianSyllabusPageReady, normalizeSyllabusDocument, prepareAustralianSyllabusPage } from '../dist/workflows/syllabus.js';
 
-/**
- * Verifies archive normalization selects the first supported syllabus document and skips support files.
- */
-async function normArchiveSelectsOneSyllabusDocument() {
+// Verify archive normalization selects the first syllabus document and skips support files.
+test('syllabus archive normalization ignores support documents and selects deterministically', async () => {
 	const temporaryRoot = await mkdtemp(path.join(os.tmpdir(), 'scraping-syllabus-test-'));
 	try {
 		const archivePath = path.join(temporaryRoot, 'curriculum.zip');
-		const outputDir = path.join(temporaryRoot, 'output');
 		const archive = new AdmZip();
 		archive.addFile('syllabus support/Support.docx', Buffer.from('support document'));
 		archive.addFile('z-unit.docx', Buffer.from('later document'));
 		archive.addFile('a-unit.docx', Buffer.from('selected document'));
 		archive.writeZip(archivePath);
 
-		const result = await normalizeSyllabusDocument(archivePath, { outputDirectory: outputDir });
+		const result = await normalizeSyllabusDocument(archivePath, { outputDirectory: path.join(temporaryRoot, 'output') });
 
 		assert.equal(result.fileName, 'a-unit.docx');
 		assert.equal(result.archiveEntry, 'a-unit.docx');
@@ -35,9 +26,7 @@ async function normArchiveSelectsOneSyllabusDocument() {
 	} finally {
 		await rm(temporaryRoot, { recursive: true, force: true });
 	}
-}
-
-test('syllabus archive normalization ignores support documents and selects deterministically', normArchiveSelectsOneSyllabusDocument);
+});
 
 test('syllabus normalization confines an overridden filename to the selected output directory', async () => {
 	const root = await mkdtemp(path.join(os.tmpdir(), 'scraping-syllabus-name-test-'));
@@ -61,7 +50,7 @@ test('syllabus page preparation navigates to the configured source only when nee
 	const navigations = [];
 	const page = {
 		url: () => currentUrl,
-		goto: async (url) => {
+		goto: async url => {
 			navigations.push(url);
 			currentUrl = url;
 		},
@@ -80,24 +69,22 @@ test('NSW syllabus preparation fills the picker and selects every enabled checkb
 	const checkboxes = checks.map((checked, index) => ({
 		isDisabled: async () => disabled[index],
 		isChecked: async () => checked,
-		click: async (options) => {
+		click: async options => {
 			calls.push(['checkbox-click', index, options]);
 			checks[index] = true;
 		},
 	}));
 	const page = {
 		url: () => AUSTRALIAN_SYLLABUS_SOURCES.NSW.url,
-		locator: (selector) => {
-			if (selector === '.custom-view__syllabus-container #search') return { fill: async (value) => calls.push(['fill', value]) };
+		locator: selector => {
+			if (selector === '.custom-view__syllabus-container #search') return { fill: async value => calls.push(['fill', value]) };
 			if (selector === '.custom-view__syllabus-container label') return { filter: () => ({ first: () => ({ click: async () => calls.push(['choose']) }) }) };
 			if (selector === '.tree-picker-id-primary-group, .tree-picker-id-secondary-group')
 				return {
-					locator: (inputSelector) =>
-						inputSelector.includes(':not(:disabled)')
-							? { first: () => ({ waitFor: async () => calls.push(['ready']) }) }
-							: { count: async () => checkboxes.length, nth: (index) => checkboxes[index] },
+					locator: inputSelector =>
+						inputSelector.includes(':not(:disabled)') ? { first: () => ({ waitFor: async () => calls.push(['ready']) }) } : { count: async () => checkboxes.length, nth: index => checkboxes[index] },
 				};
-			if (selector === '.tree-picker-id-content input') return { first: () => ({ check: async (options) => calls.push(['content-check', options]) }) };
+			if (selector === '.tree-picker-id-content input') return { first: () => ({ check: async options => calls.push(['content-check', options]) }) };
 			throw new Error(`Unexpected selector: ${selector}`);
 		},
 	};
@@ -127,7 +114,6 @@ test('syllabus readiness rejects login routes and sign-in pages', async () => {
 test('syllabus download completes interactive authentication and closes each session', async () => {
 	const root = await mkdtemp(path.join(os.tmpdir(), 'terra-syllabus-workflow-'));
 	const storageStatePath = path.join(root, 'state.json');
-	const outputDir = path.join(root, 'output');
 	const headedModes = [];
 	const closedModes = [];
 	let storedAuthentication = false;
@@ -136,13 +122,14 @@ test('syllabus download completes interactive authentication and closes each ses
 		const result = await fetchAustralianSyllabus({
 			state: 'QLD',
 			storageStatePath,
-			outputDirectory: outputDir,
+			outputDirectory: path.join(root, 'output'),
 			interactive: true,
 			timeoutMs: 1_000,
 			onInteractiveStart: () => interactiveStarts++,
 			createSession: async ({ headed, storageStatePath: requestedStatePath }) => {
 				headedModes.push(headed);
 				assert.equal(requestedStatePath, storageStatePath);
+				// terra-quality-ignore single-use -- Every session request receives the same mutable page fixture.
 				const page = {
 					currentUrl: 'about:blank',
 					/** Current page address.
@@ -157,7 +144,7 @@ test('syllabus download completes interactive authentication and closes each ses
 					async goto(url) {
 						this.currentUrl = !headed && !storedAuthentication ? 'https://curriculum.example/login' : url;
 					},
-					locator: (selector) => {
+					locator: selector => {
 						assert.equal(selector, 'body');
 						return { isVisible: async () => true, innerText: async () => 'Curriculum resources' };
 					},
@@ -166,19 +153,22 @@ test('syllabus download completes interactive authentication and closes each ses
 						assert.equal(options.name.toString(), '/download as word/i');
 						return { click: async () => {} };
 					},
-					waitForEvent: async (event) => {
+					waitForEvent: async event => {
 						assert.equal(event, 'download');
-						return { suggestedFilename: () => 'Queensland Curriculum.docx', saveAs: async (target) => writeFile(target, Buffer.from('downloaded syllabus')) };
+						return { suggestedFilename: () => 'Queensland Curriculum.docx', saveAs: async target => writeFile(target, Buffer.from('downloaded syllabus')) };
 					},
 				};
-				const context = {
-					newPage: async () => page,
-					storageState: async ({ path: target }) => {
-						storedAuthentication = true;
-						await writeFile(target, JSON.stringify({ cookies: [], origins: [] }));
+				return {
+					browser: {},
+					context: {
+						newPage: async () => page,
+						storageState: async ({ path: target }) => {
+							storedAuthentication = true;
+							await writeFile(target, JSON.stringify({ cookies: [], origins: [] }));
+						},
 					},
+					close: async () => closedModes.push(headed),
 				};
-				return { browser: {}, context, close: async () => closedModes.push(headed) };
 			},
 		});
 
@@ -204,6 +194,7 @@ test('syllabus download fails clearly and closes its session when authentication
 				state: 'QLD',
 				storageStatePath: path.join(root, 'state.json'),
 				createSession: async () => {
+					// terra-quality-ignore single-use -- The context retains one mutable page across navigation calls.
 					const page = {
 						currentUrl: 'about:blank',
 						/** Current page address.

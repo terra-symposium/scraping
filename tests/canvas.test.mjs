@@ -33,20 +33,10 @@ function canvasAnchor(o) {
 	return {
 		href,
 		textContent: text,
-		querySelector: (s) => (s === '[data-testid="dashboard-card-title"]' && cardTitle ? { getAttribute: () => cardTitle } : null),
-		getAttribute: (n) => (n === 'title' ? title : n === 'aria-label' ? text : null),
+		querySelector: s => (s === '[data-testid="dashboard-card-title"]' && cardTitle ? { getAttribute: () => cardTitle } : null),
+		getAttribute: n => (n === 'title' ? title : n === 'aria-label' ? text : null),
 		closest: () => ({ textContent: label }),
 	};
-}
-
-/**
- * Builds a module element with the title and resources read by Canvas discovery.
- * @param options - Visible module title and its resource anchors.
- * @returns A minimal DOM-like module node for the extraction callback.
- */
-function canvasModule(options) {
-	const { title, items } = options;
-	return { querySelector: (s) => (s === '.name' ? { textContent: title } : null), querySelectorAll: () => items.map(canvasAnchor) };
 }
 
 /**
@@ -58,38 +48,35 @@ function canvasPageFixture(options = {}) {
 	const { currentUrl = 'https://canvas.example/dashboard', dashboardCourses = [], courses = [], modules = [], dashboardReady = false } = options;
 	let pageUrl = currentUrl;
 	let moduleReady = false;
-	const page = {
-		url: () => pageUrl,
-		goto: async (u) => {
-			pageUrl = String(u);
-			if (pageUrl.endsWith('/modules')) moduleReady = true;
-		},
-		waitForLoadState: async () => {},
-		waitForURL: async (p) => {
-			assert.equal(p(new URL(pageUrl)), true);
-		},
-		waitForFunction: async () => {},
-		evaluate: async () => 'Canvas course page text',
-		locator: (s) => {
-			const locator = {
-				first: () => locator,
-				waitFor: async () => {},
-				isVisible: async () => (s === '#context_modules' && moduleReady) || (s.startsWith('.ic-DashboardCard__link') && dashboardReady),
-				evaluateAll: async (read) => {
-					if (s === '.ic-DashboardCard__link[href]') return read(dashboardCourses);
-					if (s === 'a[href]') return read(typeof courses === 'function' ? courses(pageUrl) : courses);
-					if (s === '#context_modules .context_module') return read(modules);
-					return read([]);
-				},
-				locator: (nestedSelector) => ({
-					evaluateAll: async (read) => read(nestedSelector === 'a[href]' ? [canvasAnchor({ href: 'https://canvas.example/courses/9/files/44', text: 'Slides' })] : []),
-				}),
-			};
-			return locator;
-		},
-	};
 	return {
-		page,
+		page: {
+			url: () => pageUrl,
+			goto: async u => {
+				pageUrl = String(u);
+				if (pageUrl.endsWith('/modules')) moduleReady = true;
+			},
+			waitForLoadState: async () => {},
+			waitForURL: async p => {
+				assert.equal(p(new URL(pageUrl)), true);
+			},
+			waitForFunction: async () => {},
+			evaluate: async () => 'Canvas course page text',
+			locator: s => {
+				const locator = {
+					first: () => locator,
+					waitFor: async () => {},
+					isVisible: async () => (s === '#context_modules' && moduleReady) || (s.startsWith('.ic-DashboardCard__link') && dashboardReady),
+					evaluateAll: async read => {
+						if (s === '.ic-DashboardCard__link[href]') return read(dashboardCourses);
+						if (s === 'a[href]') return read(typeof courses === 'function' ? courses(pageUrl) : courses);
+						if (s === '#context_modules .context_module') return read(modules);
+						return read([]);
+					},
+					locator: nestedSelector => ({ evaluateAll: async read => read(nestedSelector === 'a[href]' ? [canvasAnchor({ href: 'https://canvas.example/courses/9/files/44', text: 'Slides' })] : []) }),
+				};
+				return locator;
+			},
+		},
 		/** Current URL of the fixture page.
 		 * @return The page URL.
 		 */
@@ -116,14 +103,14 @@ test('Canvas URL and file helpers normalize routes, names, and preview responses
 
 test('Canvas module discovery classifies pages, files, and external links before filtering', async () => {
 	const page = {
-		locator: (selector) =>
+		locator: selector =>
 			selector === '#context_modules'
 				? { waitFor: async () => {} }
 				: {
-						evaluateAll: async (readGroups) =>
+						evaluateAll: async readGroups =>
 							readGroups([
 								{
-									querySelector: (name) => (name === '.name' ? { textContent: 'Week One' } : null),
+									querySelector: name => (name === '.name' ? { textContent: 'Week One' } : null),
 									querySelectorAll: () => [
 										{ href: 'https://canvas.example/courses/9/pages/intro', textContent: 'Introduction', closest: () => ({ textContent: 'Page' }) },
 										{ href: 'https://canvas.example/courses/9/files/44', textContent: 'Lecture slides', closest: () => ({ textContent: 'Attachment File' }) },
@@ -155,7 +142,7 @@ test('Canvas group export deduplicates downloads and strips secrets from recorde
 		const result = await scrapeCanvasGroup({
 			page: {},
 			request: {
-				get: async (url) => {
+				get: async url => {
 					requestedUrls.push(url);
 					return {
 						ok: () => true,
@@ -186,7 +173,7 @@ test('Canvas group export deduplicates downloads and strips secrets from recorde
 		assert.deepEqual(result.links, ['https://example.edu/book']);
 		assert.equal(result.errors.length, 0);
 		assert.equal(result.files.length, 2);
-		const downloadedFile = result.files.find((file) => file.name === 'Study Guide.pdf');
+		const downloadedFile = result.files.find(file => file.name === 'Study Guide.pdf');
 		assert.ok(downloadedFile);
 		assert.equal(path.basename(downloadedFile.path), '44-study-guide.pdf');
 		assert.equal(downloadedFile.sourceUrl, 'https://canvas.example/courses/9/files/44');
@@ -216,10 +203,8 @@ test('Canvas course discovery canonicalizes and filters the course list', async 
 });
 
 test('Canvas readiness rejects sign-in routes and opens a course module page when needed', async () => {
-	const login = canvasPageFixture({ currentUrl: 'https://canvas.example/login' });
-	assert.equal(await isCanvasReady(login.page), false);
-	const dashboard = canvasPageFixture({ dashboardReady: true });
-	assert.equal(await isCanvasReady(dashboard.page), true);
+	assert.equal(await isCanvasReady(canvasPageFixture({ currentUrl: 'https://canvas.example/login' }).page), false);
+	assert.equal(await isCanvasReady(canvasPageFixture({ dashboardReady: true }).page), true);
 
 	const course = canvasPageFixture({ currentUrl: 'https://canvas.example/courses/9' });
 	assert.equal(await isCanvasReady(course.page), true);
@@ -227,8 +212,11 @@ test('Canvas readiness rejects sign-in routes and opens a course module page whe
 });
 
 test('Canvas page reading returns visible text and canonical file links', async () => {
-	const fixture = canvasPageFixture({ currentUrl: 'https://canvas.example/courses/9/modules/items/2' });
-	const content = await readCanvasPage(fixture.page, { title: 'Week One', url: 'https://canvas.example/courses/9/pages/intro?token=private', type: 'page' });
+	const content = await readCanvasPage(canvasPageFixture({ currentUrl: 'https://canvas.example/courses/9/modules/items/2' }).page, {
+		title: 'Week One',
+		url: 'https://canvas.example/courses/9/pages/intro?token=private',
+		type: 'page',
+	});
 
 	assert.equal(content.text, 'Week One\nhttps://canvas.example/courses/9/pages/intro\n\nCanvas course page text');
 	assert.deepEqual(content.files, [{ title: 'Slides', url: 'https://canvas.example/courses/9/files/44', type: 'file' }]);
@@ -238,12 +226,15 @@ test('Canvas export uses the injected session and writes a local manifest and do
 	const root = await mkdtemp(path.join(os.tmpdir(), 'terra-canvas-export-'));
 	const output = path.join(root, 'export');
 	const storageStatePath = path.join(root, 'state.json');
-	const course = canvasAnchor({ href: 'https://canvas.example/courses/9', text: 'Course 9', title: 'Course 9' });
-	const module = canvasModule({
-		title: 'Week One',
-		items: [canvasAnchor({ href: 'https://canvas.example/courses/9/files/44?token=private', text: 'Slides', label: 'Attachment File' })],
+	// terra-quality-ignore single-use -- The injected session reuses one captured page fixture across requests.
+	const fixture = canvasPageFixture({
+		courses: [canvasAnchor({ href: 'https://canvas.example/courses/9', text: 'Course 9', title: 'Course 9' })],
+		modules: [
+			(items => ({ querySelector: s => (s === '.name' ? { textContent: 'Week One' } : null), querySelectorAll: () => items.map(canvasAnchor) }))([
+				canvasAnchor({ href: 'https://canvas.example/courses/9/files/44?token=private', text: 'Slides', label: 'Attachment File' }),
+			]),
+		],
 	});
-	const fixture = canvasPageFixture({ courses: [course], modules: [module] });
 	let closeCount = 0;
 	let sessionOptions;
 	try {
@@ -253,25 +244,28 @@ test('Canvas export uses the injected session and writes a local manifest and do
 			storageStatePath,
 			includeAllCourses: true,
 			log: () => {},
-			createSession: async (options) => {
+			createSession: async options => {
 				sessionOptions = options;
-				const context = {
-					newPage: async () => fixture.page,
-					request: {
-						get: async (url) => ({
-							ok: () => true,
-							status: () => 200,
-							url: () => url,
-							headers: () => ({ 'content-disposition': 'attachment; filename="slides.pdf"', 'content-type': 'application/pdf' }),
-							body: async () => Buffer.from('course slides'),
-							dispose: async () => {},
-						}),
+				return {
+					browser: {},
+					context: {
+						newPage: async () => fixture.page,
+						request: {
+							get: async url => ({
+								ok: () => true,
+								status: () => 200,
+								url: () => url,
+								headers: () => ({ 'content-disposition': 'attachment; filename="slides.pdf"', 'content-type': 'application/pdf' }),
+								body: async () => Buffer.from('course slides'),
+								dispose: async () => {},
+							}),
+						},
+						storageState: async ({ path: target }) => {
+							await writeFile(target, JSON.stringify({ cookies: [], origins: [] }));
+						},
 					},
-					storageState: async ({ path: target }) => {
-						await writeFile(target, JSON.stringify({ cookies: [], origins: [] }));
-					},
+					close: async () => closeCount++,
 				};
-				return { browser: {}, context, close: async () => closeCount++ };
 			},
 		});
 

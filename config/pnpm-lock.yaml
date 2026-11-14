@@ -4,11 +4,6 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-patchedDependencies:
-  '@terra-symposium/standards-quality@2.2.0':
-    hash: 7658e75f5585cd20695296ff66dff9679ebccf319ae0aa10cdaedca57e657e84
-    path: patches/@terra-symposium__standards-quality@2.2.0.patch
-
 importers:
   .:
     devDependencies:
@@ -19,8 +14,8 @@ importers:
         specifier: ^0.4.14
         version: 0.4.14(@astrojs/markdown-satteri@0.4.7)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(jiti@1.21.7)(xstate@5.33.4)
       '@terra-symposium/standards-quality':
-        specifier: 2.2.0
-        version: 2.2.0(patch_hash=7658e75f5585cd20695296ff66dff9679ebccf319ae0aa10cdaedca57e657e84)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+        specifier: 2.3.7
+        version: 2.3.7(eslint@10.14.0(jiti@1.21.7))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       eslint:
         specifier: ^10.13.0
         version: 10.14.0(jiti@1.21.7)
@@ -1756,8 +1751,8 @@ packages:
     engines: { node: '>=24.12.0' }
     hasBin: true
 
-  '@terra-symposium/standards-documentation@0.2.0':
-    resolution: { integrity: sha512-k4Ojz193iVYrsYoErbUmKdep938Gt7mOzmUZrrsILkHA8hKohJoyIkkkCB9ZiwcK36M2cWkBTxGf/8qYPMIP1g== }
+  '@terra-symposium/standards-documentation@0.2.2':
+    resolution: { integrity: sha512-OKXqxokJjfCsqCVmRd9NSdkUBXMnwY/lfZ7DWMGXQokAi0nOkRWS4z2rLGNfebbytQ0yv9zyYKY505PCOr9H8g== }
     engines: { node: '>=18.18' }
     hasBin: true
 
@@ -1767,61 +1762,72 @@ packages:
       react: '>=18'
       react-dom: '>=18'
 
-  '@terra-symposium/standards-formatting@0.2.0':
-    resolution: { integrity: sha512-3nqa8lgrYdAJyHN+tKh+QZQxv73ztqBcTwSOX7+Llt7rEQDNFZzfVbApasCnGtOlgapSUhPJhwa6K9YOQCVlew== }
+  '@terra-symposium/standards-error-boundaries@0.1.3':
+    resolution: { integrity: sha512-XDgXKvU/KgX+hcbScYL2cxfwmmDcVZu+KwrtV7IES4OoRQlg2clL1/k6ZMNjXOXf7n0JQHpG1yyrO4SVgNNnoQ== }
+    peerDependencies:
+      react: '>=18'
+      react-dom: '>=18'
+
+  '@terra-symposium/standards-formatting@0.2.3':
+    resolution: { integrity: sha512-nJXjNRAIixYQJ26SbEfu0CqDV00GCJJ6rkFDnd0Rdlwxv/1S5aPrxUwV1PzI21PVp6EmxD0DXhFFsqP/Li2QGA== }
     engines: { node: '>=18.18' }
     hasBin: true
 
-  '@terra-symposium/standards-imports@0.2.0':
-    resolution: { integrity: sha512-svEu614d/kh0eBLuzkcHLVuZMXBC87kGCAGfZ1Fxekd2P6bmM9KY5jeENGupsbfZJGPvkLGZvD7Cobzk5Txr7A== }
+  '@terra-symposium/standards-imports@0.2.2':
+    resolution: { integrity: sha512-3pmrWyIjmVkWvaBPS5EnnBJQaI1i0xySBwi48DtJfsu6LonAYNHx0c/K8lJqZ4nP1NpyHKyrEp2xsJ3F2+hV8A== }
     engines: { node: '>=18.18' }
     hasBin: true
 
-  '@terra-symposium/standards-language-checks@0.2.0':
-    resolution: { integrity: sha512-nZ7MC+0ZQj1zq2O5jH8bDkXX1UjynvwikQz8sN1r0ZI50CvgdgV125NGyZU4y+YqJy1g04EATG4nIKQfFexcZw== }
+  '@terra-symposium/standards-language-checks@0.2.1':
+    resolution: { integrity: sha512-EJ0w1NDR1+483Stl6owOcFYfgyrmUEBVVtFC1R5bupID4J9S+3QB7wwnmwtS/WRycj5rHE9lDmiUgvjQCl7rvA== }
     engines: { node: '>=18.18' }
     hasBin: true
 
-  '@terra-symposium/standards-naming@0.2.0':
-    resolution: { integrity: sha512-s4ZBtwrXR05yHY+zmODh4Cdm8AnX3IUQTg2+Gr9OO1GWbD/vVwa6zz+2eKLUx3v7pnQqPxSRxwG6aOst4BItyg== }
+  '@terra-symposium/standards-naming@0.2.1':
+    resolution: { integrity: sha512-UVcA1Y1G7GXu4tJHAcoayYFeBPxAZzK5UWccXs2glNKy3l5tm9qNgiYn7EBAi+3cR9FJNbzPWLSy0PEe9lbz2g== }
     engines: { node: '>=18.18' }
     hasBin: true
 
-  '@terra-symposium/standards-patterns@0.2.0':
-    resolution: { integrity: sha512-5HnjjVU5WHBDK7D6d4rwdnWHShYSjvDsRpOOd9gBMOGsb6cd/9I34JdJlvCOjBNS9D6GVcI3+jrcz2i4OFl6zA== }
+  '@terra-symposium/standards-patterns@0.2.3':
+    resolution: { integrity: sha512-3vOlL6+CEGSLppsUHvAy/gFWRICKh+r/PJuhxRGEv1u/qz+98WHLK0q7pWxizRjuPUH5CBBqp5bYBUDxXvhHHQ== }
     engines: { node: '>=18.18' }
     hasBin: true
 
-  '@terra-symposium/standards-quality-core@0.2.0':
-    resolution: { integrity: sha512-Bf6hLNLIKMW/rPhnpy7nYO0JjpTSeITcW0ldpiIsxeTNUnUmcH5XRrtiD7rZQx/MDmQ/JRVFDeaLUsLlv1ywFw== }
+  '@terra-symposium/standards-quality-core@0.2.1':
+    resolution: { integrity: sha512-cRzP0xN/dB88uMXpCnH0RGnuTenVFw5vAAS8bXS8mpMU3QDDP+Zp58k1F7bS6Qgozt6+m+OT0bPqX1UbyGCHtQ== }
     engines: { node: '>=18.18' }
 
-  '@terra-symposium/standards-quality-reports@0.2.0':
-    resolution: { integrity: sha512-f9IcdNssufEZNFXEriYJ0Q4SNOOZ296ymHRRQz9zte48KTs83AWAWM7SPmR64rF+9eu+/yZVuaZ3v96Geapfmg== }
-    engines: { node: '>=18.18' }
-    hasBin: true
-
-  '@terra-symposium/standards-quality@2.2.0':
-    resolution: { integrity: sha512-SlVSaWHT/ctHjDcS2Av5nUzmVb+p+A1EyodXGa7BOVmHZ+CySg7/EEXyTExr2fZxbSEAEwlgi6gB6cU3Nfvr2Q== }
+  '@terra-symposium/standards-quality-reports@0.2.1':
+    resolution: { integrity: sha512-JUkCf76wdtZ3VHgBczr/mtnltcS+rwIUQITInp4tja6vQFYpHwcSzvOLT5lnY34XTFOjMlxLFUhLvBrhkNT9rA== }
     engines: { node: '>=18.18' }
     hasBin: true
 
-  '@terra-symposium/standards-refactoring@0.2.0':
-    resolution: { integrity: sha512-2iLOCBaN+nejwp+JaDCEnZDHTzIVB97MDuHQ/5TpDrqgMicgTpTQKWGUw/wTpNVV3Osi5UmwF782JLk7wC1JRA== }
-    engines: { node: '>=18.18' }
-    hasBin: true
-
-  '@terra-symposium/standards-security@0.2.0':
-    resolution: { integrity: sha512-M46DQ/laqrQABpfnHR5KwNDVqCilzr8Fn4Xla41SEK6Xvra0S1mVyUf2Q5QuGb4SXOabyYUgUEoVdgZLXeVL8A== }
-    engines: { node: '>=18.18' }
-    hasBin: true
-
-  '@terra-symposium/standards-ui-quality@0.2.0':
-    resolution: { integrity: sha512-Spo3EyOfAfpa6q6FsEM1t+nAz/YFwlcDpNKpl5u8GXsskJgogRQEEZzcvYESX4WhoksxTY+WMF903aQvzAy3RQ== }
+  '@terra-symposium/standards-quality@2.3.7':
+    resolution: { integrity: sha512-qRbR7C3Yt6/DTKMhuf8gzxGxfoBASU83IsMoycgpc2YvsWSdp3vmkGmbPrqvoMzOoi2eZ+BOmOLodWjNmjjn/g== }
     engines: { node: '>=18.18' }
     hasBin: true
     peerDependencies:
-      '@terra-symposium/standards-error-boundaries': ^0.1.2
+      eslint: '>=9'
+    peerDependenciesMeta:
+      eslint:
+        optional: true
+
+  '@terra-symposium/standards-refactoring@0.2.4':
+    resolution: { integrity: sha512-i2V4heliMgQsu75rf2ApJIPDMx8t9bGA/WHmW+pSq9SiOvpaQlam9BnJQGpTikKbLon7kUddWf9+YEiIDG7KNQ== }
+    engines: { node: '>=18.18' }
+    hasBin: true
+
+  '@terra-symposium/standards-security@0.2.1':
+    resolution: { integrity: sha512-eaHu6l0P0g00fIGrfU9IxudOcpJgLHNl4Alv/ntNXmt/4Uxlw4dItQ5/mQdOxNXxiXe8HUlVjkKl21fzzE37/g== }
+    engines: { node: '>=18.18' }
+    hasBin: true
+
+  '@terra-symposium/standards-ui-quality@0.2.1':
+    resolution: { integrity: sha512-fcwcCsd8QH22Dh5iO8PVp4lMHjuwbVpJwlji3AIUrssysQYtH5h5iSKGiywVEF75E5zrmMkHq9USkpZF3EhAYg== }
+    engines: { node: '>=18.18' }
+    hasBin: true
+    peerDependencies:
+      '@terra-symposium/standards-error-boundaries': ^0.1.3
 
   '@terra-symposium/styling@0.1.34':
     resolution: { integrity: sha512-QBj55iKpLfGlT3DZylBOA7hJPY5d3V9R4mjmr3OhsA8rr9JiK0HzwEK+F1t+MDYTAXsodzMWJLxemwdFoIRtqg== }
@@ -5843,9 +5849,9 @@ snapshots:
       - uploadthing
       - xstate
 
-  '@terra-symposium/standards-documentation@0.2.0':
+  '@terra-symposium/standards-documentation@0.2.2':
     dependencies:
-      '@terra-symposium/standards-quality-core': 0.2.0
+      '@terra-symposium/standards-quality-core': 0.2.1
       typescript: 5.9.3
 
   '@terra-symposium/standards-error-boundaries@0.1.2(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
@@ -5853,72 +5859,80 @@ snapshots:
       react: 19.3.1
       react-dom: 19.3.1(react@19.3.1)
 
-  '@terra-symposium/standards-formatting@0.2.0':
+  '@terra-symposium/standards-error-boundaries@0.1.3(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
     dependencies:
-      '@terra-symposium/standards-documentation': 0.2.0
-      '@terra-symposium/standards-quality-core': 0.2.0
+      react: 19.3.1
+      react-dom: 19.3.1(react@19.3.1)
+
+  '@terra-symposium/standards-formatting@0.2.3':
+    dependencies:
+      '@terra-symposium/standards-documentation': 0.2.2
+      '@terra-symposium/standards-quality-core': 0.2.1
       typescript: 5.9.3
 
-  '@terra-symposium/standards-imports@0.2.0':
+  '@terra-symposium/standards-imports@0.2.2':
     dependencies:
-      '@terra-symposium/standards-documentation': 0.2.0
-      '@terra-symposium/standards-quality-core': 0.2.0
+      '@terra-symposium/standards-documentation': 0.2.2
+      '@terra-symposium/standards-quality-core': 0.2.1
       typescript: 5.9.3
 
-  '@terra-symposium/standards-language-checks@0.2.0':
+  '@terra-symposium/standards-language-checks@0.2.1':
     dependencies:
-      '@terra-symposium/standards-quality-core': 0.2.0
+      '@terra-symposium/standards-quality-core': 0.2.1
 
-  '@terra-symposium/standards-naming@0.2.0':
+  '@terra-symposium/standards-naming@0.2.1':
     dependencies:
-      '@terra-symposium/standards-quality-core': 0.2.0
+      '@terra-symposium/standards-quality-core': 0.2.1
       typescript: 5.9.3
 
-  '@terra-symposium/standards-patterns@0.2.0':
+  '@terra-symposium/standards-patterns@0.2.3':
     dependencies:
-      '@terra-symposium/standards-quality-core': 0.2.0
+      '@terra-symposium/standards-quality-core': 0.2.1
       typescript: 5.9.3
 
-  '@terra-symposium/standards-quality-core@0.2.0':
+  '@terra-symposium/standards-quality-core@0.2.1':
     dependencies:
       typescript: 5.9.3
 
-  '@terra-symposium/standards-quality-reports@0.2.0':
+  '@terra-symposium/standards-quality-reports@0.2.1':
     dependencies:
-      '@terra-symposium/standards-quality-core': 0.2.0
+      '@terra-symposium/standards-quality-core': 0.2.1
 
-  '@terra-symposium/standards-quality@2.2.0(patch_hash=7658e75f5585cd20695296ff66dff9679ebccf319ae0aa10cdaedca57e657e84)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
+  '@terra-symposium/standards-quality@2.3.7(eslint@10.14.0(jiti@1.21.7))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
     dependencies:
-      '@terra-symposium/standards-documentation': 0.2.0
-      '@terra-symposium/standards-error-boundaries': 0.1.2(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
-      '@terra-symposium/standards-formatting': 0.2.0
-      '@terra-symposium/standards-imports': 0.2.0
-      '@terra-symposium/standards-language-checks': 0.2.0
-      '@terra-symposium/standards-naming': 0.2.0
-      '@terra-symposium/standards-patterns': 0.2.0
-      '@terra-symposium/standards-quality-core': 0.2.0
-      '@terra-symposium/standards-quality-reports': 0.2.0
-      '@terra-symposium/standards-refactoring': 0.2.0
-      '@terra-symposium/standards-security': 0.2.0
-      '@terra-symposium/standards-ui-quality': 0.2.0(@terra-symposium/standards-error-boundaries@0.1.2(react-dom@19.3.1(react@19.3.1))(react@19.3.1))
+      '@terra-symposium/standards-documentation': 0.2.2
+      '@terra-symposium/standards-error-boundaries': 0.1.3(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      '@terra-symposium/standards-formatting': 0.2.3
+      '@terra-symposium/standards-imports': 0.2.2
+      '@terra-symposium/standards-language-checks': 0.2.1
+      '@terra-symposium/standards-naming': 0.2.1
+      '@terra-symposium/standards-patterns': 0.2.3
+      '@terra-symposium/standards-quality-core': 0.2.1
+      '@terra-symposium/standards-quality-reports': 0.2.1
+      '@terra-symposium/standards-refactoring': 0.2.4
+      '@terra-symposium/standards-security': 0.2.1
+      '@terra-symposium/standards-ui-quality': 0.2.1(@terra-symposium/standards-error-boundaries@0.1.3(react-dom@19.3.1(react@19.3.1))(react@19.3.1))
       typescript: 5.9.3
+    optionalDependencies:
+      eslint: 10.14.0(jiti@1.21.7)
     transitivePeerDependencies:
       - react
       - react-dom
 
-  '@terra-symposium/standards-refactoring@0.2.0':
+  '@terra-symposium/standards-refactoring@0.2.4':
     dependencies:
-      '@terra-symposium/standards-quality-core': 0.2.0
+      '@terra-symposium/standards-quality-core': 0.2.1
       typescript: 5.9.3
 
-  '@terra-symposium/standards-security@0.2.0':
+  '@terra-symposium/standards-security@0.2.1':
     dependencies:
-      '@terra-symposium/standards-quality-core': 0.2.0
+      '@terra-symposium/standards-quality-core': 0.2.1
+      typescript: 5.9.3
 
-  '@terra-symposium/standards-ui-quality@0.2.0(@terra-symposium/standards-error-boundaries@0.1.2(react-dom@19.3.1(react@19.3.1))(react@19.3.1))':
+  '@terra-symposium/standards-ui-quality@0.2.1(@terra-symposium/standards-error-boundaries@0.1.3(react-dom@19.3.1(react@19.3.1))(react@19.3.1))':
     dependencies:
-      '@terra-symposium/standards-error-boundaries': 0.1.2(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
-      '@terra-symposium/standards-quality-core': 0.2.0
+      '@terra-symposium/standards-error-boundaries': 0.1.3(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      '@terra-symposium/standards-quality-core': 0.2.1
       typescript: 5.9.3
 
   '@terra-symposium/styling@0.1.34(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(yaml@2.9.1)':

@@ -49,24 +49,27 @@
 		"syllabus-fetch": "./dist/cli/syllabus.js"
 	},
 	"scripts": {
-		"build": "tsc -p tsconfig.json",
-		"typecheck": "tsc --noEmit -p tsconfig.json",
+		"prepare": "husky config/husky",
+		"changeset": "changeset",
+		"changeset:status": "changeset status",
+		"version-packages": "changeset version",
+		"build": "tsc -p config/tsconfig.json",
 		"test": "pnpm run build && node --test tests/*.test.mjs",
-		"prepare": "pnpm run build",
 		"canvas:export": "node dist/cli/export.js",
 		"canvas:transcripts": "node src/cli/transcripts.mjs",
 		"syllabus:fetch": "node dist/cli/syllabus.js",
-		"quality": "pnpm run quality:check",
-		"quality:all": "pnpm run quality:fix",
-		"quality:fix": "pnpm --dir config run quality:fix",
-		"quality:check": "pnpm --dir config run quality:check"
+		"quality": "node \"$(git rev-parse --show-toplevel)/scripts/quality-runner.mjs\" quality",
+		"quality:all": "node \"$(git rev-parse --show-toplevel)/scripts/quality-runner.mjs\" quality --all",
+		"verify": "pnpm run quality:all && pnpm run test"
 	},
 	"dependencies": {
 		"adm-zip": "^0.6.1",
 		"playwright": "^1.62.1"
 	},
 	"devDependencies": {
+		"@changesets/cli": "3.0.3",
 		"@types/node": "^24.0.0",
+		"husky": "9.1.7",
 		"typescript": "5.9.3"
 	},
 	"publishConfig": {

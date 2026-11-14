@@ -88,6 +88,5 @@
 	},
 	"autofix": {
 		"document": false
-	},
-	"qualityCommands": [{ "name": "test", "command": "pnpm", "args": ["run", "test"] }]
+	}
 }

@@ -8,7 +8,7 @@ The `canvas-transcripts` command organizes local transcript and caption files in
 ## Inventory flow
 
 <Nodes
-	direction="TB"
+	direction='TB'
 	height={500}
 	nodes={`[
     {"id":"input","type":"origin","data":{"title":"Local transcript source tree"}},
@@ -61,8 +61,7 @@ The manifest records the inference method (manual-mapping, path-pattern, or unre
 
 ## Add optional metadata
 
-===[Source mapping file]
-The mapping file can contain a top-level `sources` object or the path-keyed object directly. Prefer paths relative to the input directory so files with duplicate basenames remain distinguishable:
+===[Source mapping file] The mapping file can contain a top-level `sources` object or the path-keyed object directly. Prefer paths relative to the input directory so files with duplicate basenames remain distinguishable:
 
 ```json
 {
@@ -92,8 +91,7 @@ The report copies only week, meetingTitle, meetingDate, platform, captureMethod,
 
 ## Check expected-meeting coverage
 
-===[Expected-meetings file]
-Use this optional file to report whether each known meeting has a matching transcript source:
+===[Expected-meetings file] Use this optional file to report whether each known meeting has a matching transcript source:
 
 ```json
 {

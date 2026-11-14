@@ -1,4 +1,0 @@
-{
-	"entry": ["src/index.ts", "src/cli/export.ts", "src/cli/syllabus.ts", "src/cli/transcripts.mjs", "tests/parallel.test.mjs"],
-	"project": ["src/**/*.{ts,mjs}", "tests/**/*.mjs"]
-}

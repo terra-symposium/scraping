@@ -8,7 +8,7 @@ The package provides helpers for two scopes. `runQueued` limits concurrency insi
 ## Choose the coordination scope
 
 <Nodes
-	direction="TB"
+	direction='TB'
 	height={470}
 	nodes={`[
     {"id":"workflow","type":"origin","data":{"title":"Choose a workflow limit"}},
@@ -54,8 +54,7 @@ const workers = resolveWorkerCount(4, 'canvas', {
 
 ## Run work in one process
 
-|||[Bound a queue]
-`runQueued` starts no more than the selected number of workers. Each input is passed to `execute(item, index)` once.
+|||[Bound a queue] `runQueued` starts no more than the selected number of workers. Each input is passed to `execute(item, index)` once.
 
 ```ts
 import { resolveWorkerCount, runQueued } from '@terra-symposium/scraping';
@@ -67,8 +66,7 @@ const failures = await runQueued(courseUrls, resolveWorkerCount(4, 'canvas'), as
 
 |||
 
-|||[Limit independent processes]
-`acquireWorkflowSlot` waits for one of the shared pool's slots and returns an idempotent async release callback.
+|||[Limit independent processes] `acquireWorkflowSlot` waits for one of the shared pool's slots and returns an idempotent async release callback.
 
 ```ts
 import { acquireWorkflowSlot } from '@terra-symposium/scraping';
@@ -85,8 +83,7 @@ try {
 }
 ```
 
-Keep lock names stable across callers. Processes sharing a pool must use the same size.
-|||
+Keep lock names stable across callers. Processes sharing a pool must use the same size. |||
 
 ## Failure behavior
 
@@ -94,8 +91,7 @@ Keep lock names stable across callers. Processes sharing a pool must use the sam
 
 Invalid, non-finite, zero, or negative worker counts result in one worker. Finite fractions are floored. Choose a limit that respects both local browser capacity and the external service's rules.
 
-===[Cross-process slot details]
-Without `directory`, the pool is under the OS temporary directory and scoped to a hash of the resolved current working directory plus the sanitized pool name. Processes in the same checkout using the same name share a pool; different working directories receive separate default pools.
+===[Cross-process slot details] Without `directory`, the pool is under the OS temporary directory and scoped to a hash of the resolved current working directory plus the sanitized pool name. Processes in the same checkout using the same name share a pool; different working directories receive separate default pools.
 
 Set `directory` to the same resolved path in each process when callers from different working directories must coordinate. An explicit directory replaces the default name-scoped path. All processes sharing a pool must agree on its size.
 

@@ -12,20 +12,19 @@
 		"description": "Guides and API reference for scraping workflows.",
 		"host": "127.0.0.1",
 		"port": 2060,
-		"out": "dist/docs"
+		"out": "../dist/docs"
 	},
 	"scripts": {
 		"docs": "docs dev --host 127.0.0.1 --port 2060",
-		"build": "docs build --out dist/docs",
+		"build": "docs build --out ../dist/docs",
 		"preview": "docs preview --host 127.0.0.1 --port 2060",
-		"quality": "cd .. && ./config/node_modules/.bin/terra-quality quality --all --warn",
-		"quality:fix": "cd .. && ./config/node_modules/.bin/terra-quality quality --all",
-		"quality:check": "cd .. && ./config/node_modules/.bin/terra-quality quality --all --warn"
+		"quality": "node \"$(git rev-parse --show-toplevel)/scripts/quality-runner.mjs\" quality",
+		"quality:all": "node \"$(git rev-parse --show-toplevel)/scripts/quality-runner.mjs\" quality --all"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
 		"@terra-symposium/docs": "^0.4.14",
-		"@terra-symposium/standards-quality": "2.2.0",
+		"@terra-symposium/standards-quality": "2.3.7",
 		"eslint": "^10.13.0",
 		"globals": "^17.13.0",
 		"knip": "^6.44.1",

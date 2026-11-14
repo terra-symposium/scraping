@@ -27,22 +27,6 @@ function option(name: string): string | undefined {
 	return index >= 0 ? args[index + 1] : undefined;
 }
 
-/**
- * Splits and trims the course-group titles selected through CLI options.
- *
- * @param value Comma-separated group titles.
- *
- * @return Non-empty, trimmed group title filters.
- */
-function parseGroupMatches(value: string): string[] {
-	const matches: string[] = [];
-	for (const item of value.split(',')) {
-		const match = item.trim();
-		if (match) matches.push(match);
-	}
-	return matches;
-}
-
 /*//////////////////////////////////////////////////
 HELPERS
 //////////////////////////////////////////////////*/
@@ -64,7 +48,10 @@ Options:
 			canvasUrl,
 			output: option('output'),
 			storageStatePath: option('storage-state'),
-			groupMatches: parseGroupMatches(option('groups') || option('group') || ''),
+			groupMatches: (option('groups') || option('group') || '')
+				.split(',')
+				.map(item => item.trim())
+				.filter(Boolean),
 			headed: args.includes('--headed') || args.includes('--interactive'),
 			includeAllCourses: args.includes('--all-courses'),
 		});

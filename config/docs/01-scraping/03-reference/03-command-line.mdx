@@ -13,20 +13,19 @@ Install the package in the consuming repository, then run an installed command w
 pnpm exec canvas-export --canvas-url=https://canvas.example.edu/dashboard
 ```
 
-| Option                       | Required | Default                                         | Behavior                                                                                                              |
-| ---------------------------- | -------- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `--canvas-url=URL`           | Yes      | None                                            | Canvas dashboard, course, or other Canvas URL used to start the workflow.                                             |
-| `--groups="Week 1,Week 2"`   | No       | All module groups                               | Comma-separated, case-insensitive title fragments. Any fragment may match. `--group` is an alias.                     |
-| `--output=PATH`              | No       | `~/Downloads/canvas-export`                     | Directory for the manifest, log, module text, and downloaded files.                                                   |
-| `--headed` / `--interactive` | No       | Headless                                        | Either flag shows Chromium. If saved state is not ready, allow visible sign-in and save state outside the repository. |
-| `--storage-state=PATH`       | No       | OS-level Canvas workflow path                   | Use a specific Playwright storage-state file.                                                                         |
-| `--all-courses`              | No       | Season/year or semester/term-number/year titles | Include every visible course instead of applying the default course-title filter.                                     |
-| `--help` or `-h`             | No       | —                                               | Print usage and exit.                                                                                                 |
+| Option | Required | Default | Behavior |
+| --- | --- | --- | --- |
+| `--canvas-url=URL` | Yes | None | Canvas dashboard, course, or other Canvas URL used to start the workflow. |
+| `--groups="Week 1,Week 2"` | No | All module groups | Comma-separated, case-insensitive title fragments. Any fragment may match. `--group` is an alias. |
+| `--output=PATH` | No | `~/Downloads/canvas-export` | Directory for the manifest, log, module text, and downloaded files. |
+| `--headed` / `--interactive` | No | Headless | Either flag shows Chromium. If saved state is not ready, allow visible sign-in and save state outside the repository. |
+| `--storage-state=PATH` | No | OS-level Canvas workflow path | Use a specific Playwright storage-state file. |
+| `--all-courses` | No | Season/year or semester/term-number/year titles | Include every visible course instead of applying the default course-title filter. |
+| `--help` or `-h` | No | — | Print usage and exit. |
 
 The command prints progress messages and a JSON summary containing output and manifest. A course URL is exported by itself. For a dashboard or course list, the default filter keeps titles that look like a named season and year, or a semester/term number and year. `--interactive` is an alias for `--headed`.
 
-See [Canvas API behavior](/01-scraping/03-reference/01-canvas/#complete-export-behavior) for the output tree and failure handling.
-|||
+See [Canvas API behavior](/01-scraping/03-reference/01-canvas/#complete-export-behavior) for the output tree and failure handling. |||
 
 |||[syllabus-fetch]
 
@@ -48,8 +47,7 @@ pnpm exec syllabus-fetch --state=NSW --headed
 | `--timeout=MS`         | No       | 30000                                             | Set the download-control timeout; a positive value also sets the interactive-auth timeout.    |
 | `--help` or `-h`       | No       | —                                                 | Print usage and exit.                                                                         |
 
-`--headed` also permits interactive sign-in. With `--interactive` alone, the first attempt is headless; the helper opens a visible session only if the page is not ready. The command prints the `FetchedAustralianSyllabus` result as JSON.
-|||
+`--headed` also permits interactive sign-in. With `--interactive` alone, the first attempt is headless; the helper opens a visible session only if the page is not ready. The command prints the `FetchedAustralianSyllabus` result as JSON. |||
 
 |||[canvas-transcripts]
 
@@ -72,5 +70,4 @@ The input and output must resolve to different paths. This tool is offline: it r
 
 The command prints a JSON summary with output path, transcript count, found/partial/missing weeks, missing expected meeting IDs, unresolved sources, read errors, and duplicate count. Each requested week receives a `Week-##.txt` file, including a diagnostic file for an empty week.
 
-See [Transcript inventory](/01-scraping/02-guides/05-transcript-inventory/) for week inference, metadata and expected-meeting JSON, report statuses, and review guidance.
-|||
+See [Transcript inventory](/01-scraping/02-guides/05-transcript-inventory/) for week inference, metadata and expected-meeting JSON, report statuses, and review guidance. |||
