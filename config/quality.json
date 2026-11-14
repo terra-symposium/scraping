@@ -1,0 +1,92 @@
+{
+	"$schema": "./config/node_modules/@terra-symposium/standards-quality/quality.schema.json",
+	"root": ".",
+	"configRoot": "config",
+	"sourceRoots": ["."],
+	"languageProfiles": ["c", "java", "python"],
+	"extensions": [
+		".astro",
+		".c",
+		".cjs",
+		".cpp",
+		".cts",
+		".css",
+		".h",
+		".html",
+		".java",
+		".js",
+		".jsx",
+		".json",
+		".jsonc",
+		".md",
+		".mdx",
+		".mjs",
+		".mts",
+		".py",
+		".pyi",
+		".rs",
+		".sh",
+		".sql",
+		".toml",
+		".ts",
+		".tsx",
+		".yaml",
+		".yml"
+	],
+	"tools": {
+		"eslint": "config/node_modules/.bin/eslint",
+		"knip": "config/node_modules/.bin/knip",
+		"prettier": "config/node_modules/.bin/prettier"
+	},
+	"tsconfig": "tsconfig.json",
+	"oneLineImports": true,
+	"prettierPrintWidth": 180,
+	"documentation": {
+		"required": {
+			"types": true,
+			"functions": true,
+			"exportedFunctions": true
+		},
+		"commandRoots": ["."]
+	},
+	"enabledChecks": {
+		"document": true,
+		"format": true,
+		"import": true,
+		"name": true,
+		"forward": true,
+		"accessibility": true,
+		"display-name": true,
+		"performance-patterns": true,
+		"documented-commands": true,
+		"lint": true,
+		"knip": true,
+		"dead-code": true,
+		"type": true,
+		"recommend": true,
+		"command": true,
+		"diff": true,
+		"alias": true,
+		"security": true,
+		"repeated-classes": true,
+		"tailwind-canonical": true,
+		"regex-dedup": true,
+		"ui-patterns": true,
+		"ui-recommendations": true,
+		"error-boundaries": true,
+		"github": true
+	},
+	"performancePatterns": {
+		"extensions": [".cjs", ".cts", ".js", ".jsx", ".mjs", ".mts", ".ts", ".tsx"]
+	},
+	"security": {
+		"runtimeRoots": ["src/workflows/parallel.ts"]
+	},
+	"protectedIdentifiers": ["directory"],
+	"github": {
+		"repositories": ["Terra-Symposium/scraping"]
+	},
+	"autofix": {
+		"document": false
+	}
+}

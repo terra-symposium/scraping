@@ -1,0 +1,24 @@
+---
+title: Guides
+description: Task guides for browser sessions, parallel execution, Canvas, syllabuses, and transcripts.
+sidebar:
+  label: 02. Guides
+---
+
+## Workflow foundations
+
+Start with the two shared helpers before building a collection task. [Browser sessions and authentication](/01-scraping/02-guides/01-browser-sessions/) explains headed and headless runs, sign-in recovery, saved state, and cleanup. [Parallel work](/01-scraping/02-guides/02-parallel-work/) explains worker-count precedence, bounded queues, and cross-process slots.
+
+## Task guides
+
+| Guide                                                                              | Use it to                                                                     |
+| ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| [Browser sessions and authentication](/01-scraping/02-guides/01-browser-sessions/) | Reuse browser state and decide when a workflow opens a visible browser.       |
+| [Parallel work](/01-scraping/02-guides/02-parallel-work/)                          | Limit work within one process or across separate processes.                   |
+| [Canvas export](/01-scraping/02-guides/03-canvas-export/)                          | Capture visible courses, modules, page text, and Canvas files.                |
+| [Australian syllabus acquisition](/01-scraping/02-guides/04-australian-syllabus/)  | Fetch jurisdiction syllabuses and normalize local Word documents.             |
+| [Transcript inventory](/01-scraping/02-guides/05-transcript-inventory/)            | Build weekly files, provenance records, and meeting-coverage reports offline. |
+
+## Shared ownership
+
+These workflows write source material locally. The consuming application owns its service-specific account checks, content transformation, review, and publishing.

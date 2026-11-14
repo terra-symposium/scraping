@@ -1,0 +1,12 @@
+{
+	"workspaces": {
+		"..": {
+			"entry": ["src/index.ts", "src/workflows/index.ts", "src/cli/export.ts", "src/cli/syllabus.ts", "src/cli/transcripts.mjs", "tests/**/*.test.mjs", "scripts/quality-runner.mjs"],
+			"project": ["src/**/*.{ts,mjs}", "tests/**/*.mjs", "scripts/quality-runner.mjs"]
+		},
+		".": {
+			"entry": ["quality-entry.mjs"],
+			"project": ["quality-entry.mjs"]
+		}
+	}
+}

@@ -18,6 +18,7 @@ import AdmZip from 'adm-zip';
 
 // TYPES
 import type { Page } from 'playwright';
+import type { WorkflowBrowserSession, WorkflowSessionFactoryOptions } from './browser.js';
 
 /*//////////////////////////////////////////////////
 REGEX
@@ -72,6 +73,8 @@ export type FetchAustralianSyllabusOptions = PrepareAustralianSyllabusPageOption
 	timeoutMs?: number;
 	/** Optional callback shown when manual sign-in is needed. */
 	onInteractiveStart?: () => void | Promise<void>;
+	/** Optional factory for consumer-specific browser sessions. */
+	createSession?: (options: WorkflowSessionFactoryOptions) => Promise<WorkflowBrowserSession>;
 };
 
 /** Metadata for a locally saved syllabus download. */
@@ -123,13 +126,12 @@ export type NormalizedSyllabusDocument = {
 export async function prepareAustralianSyllabusPage(page: Page, state: AustralianSyllabusState, options: PrepareAustralianSyllabusPageOptions = {}): Promise<Page> {
 	const source = AUSTRALIAN_SYLLABUS_SOURCES[state];
 	if (!source) throw new Error(`No curriculum source is configured for ${state}.`);
-	const current = (() => {
-		try {
-			return new URL(page.url());
-		} catch {
-			return undefined;
-		}
-	})();
+	let current: URL | undefined;
+	try {
+		current = new URL(page.url());
+	} catch {
+		current = undefined;
+	}
 	const target = new URL(source.url);
 	if (!current || current.origin !== target.origin || current.pathname !== target.pathname) await page.goto(source.url, { waitUntil: 'domcontentloaded' });
 	if (state !== 'NSW') return page;
@@ -152,16 +154,35 @@ export async function prepareAustralianSyllabusPage(page: Page, state: Australia
 	return page;
 }
 
+/**
+ * Sanitizes an operating-system filename using only printable, portable characters.
+ *
+ * @param value - Suggested filename from a curriculum download.
+ * @return Safe filename with a fallback when the suggestion becomes empty.
+ */
 function sFileName(value: string): string {
+	const characters = [];
+	for (const character of path.basename(value.replaceAll('\\', '/'))) {
+		const code = character.codePointAt(0) || 0;
+		characters.push(code < 0x20 || code === 0x7f || '<>:"|?*'.includes(character) ? '_' : character);
+	}
 	return (
-		Array.from(path.basename(value.replaceAll('\\', '/')), (character) => {
-			const code = character.codePointAt(0) || 0;
-			return code < 0x20 || code === 0x7f || '<>:"|?*'.includes(character) ? '_' : character;
-		})
+		characters
 			.join('')
 			.trim()
 			.replace(/[. ]+$/g, '') || 'syllabus.docx'
 	);
+}
+
+/**
+ * Compares syllabus archive entries by their stored paths.
+ *
+ * @param l - First archive entry.
+ * @param r - Second archive entry.
+ * @return Locale comparison result for the entry names.
+ */
+function compArchiveEntryNames(l: { entryName: string }, r: { entryName: string }): number {
+	return l.entryName.localeCompare(r.entryName);
 }
 
 /**
@@ -204,7 +225,8 @@ export async function fetchAustralianSyllabus(options: FetchAustralianSyllabusOp
 		headed: options.headed,
 		interactive: options.interactive ?? options.headed ?? false,
 		timeoutMs: options.timeoutMs || 15 * 60_000,
-		open: async (context) => {
+		createSession: options.createSession,
+		open: async (context: import('playwright').BrowserContext): Promise<Page> => {
 			const page = await context.newPage();
 			await page.goto(source.url, { waitUntil: 'domcontentloaded' });
 			return page;
@@ -254,10 +276,12 @@ export async function normalizeSyllabusDocument(file: string, options: Normalize
 		return { filePath, fileName, sourcePath };
 	}
 	if (!/^\.zip$/i.test(ext)) throw new Error(`Unsupported syllabus file type: ${ext || '(no extension)'}.`);
-	const entry = new AdmZip(sourcePath)
-		.getEntries()
-		.filter((entry) => !entry.isDirectory && DOCX_I_REGEX.test(path.extname(entry.entryName)) && !/syllabus\s*support/i.test(entry.entryName))
-		.sort((left, right) => left.entryName.localeCompare(right.entryName))[0];
+	const wordEntries = [];
+	for (const entry of new AdmZip(sourcePath).getEntries()) {
+		if (!entry.isDirectory && DOCX_I_REGEX.test(path.extname(entry.entryName)) && !/syllabus\s*support/i.test(entry.entryName)) wordEntries.push(entry);
+	}
+	wordEntries.sort(compArchiveEntryNames);
+	const entry = wordEntries[0];
 	if (!entry) throw new Error('No syllabus Word documents were found in the ZIP archive.');
 	const archiveDir = path.join(outputDir, sFileName(path.basename(baseName, ext)));
 	await mkdir(archiveDir, { recursive: true, mode: 0o700 });

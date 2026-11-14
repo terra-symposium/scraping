@@ -1,6 +1,11 @@
 node_modules/
 dist/
+tests/results/
 .astro/
 .DS_Store
 canvas-export/
 *.log
+
+# Local generated caches and dependency links
+.astro
+/config/dist

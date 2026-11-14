@@ -14,6 +14,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 
 // TYPES
 import type { APIRequestContext, APIResponse, Page } from 'playwright';
+import type { WorkflowBrowserSession, WorkflowSessionFactoryOptions } from './workflows/browser.js';
 
 /*//////////////////////////////////////////////////
 CONFIG
@@ -40,6 +41,8 @@ export type CanvasScrapeOptions = {
 	headed?: boolean;
 	interactive?: boolean;
 	includeAllCourses?: boolean;
+	/** Optional factory for consumer-specific browser sessions. */
+	createSession?: (options: WorkflowSessionFactoryOptions) => Promise<WorkflowBrowserSession>;
 	log?: (message: string, failure?: boolean) => void;
 };
 /** Result returned by a Canvas export after writing its manifest and log. */
@@ -53,6 +56,11 @@ export type ScrapeCanvasCourseOptions = {
 	groupMatches?: string[];
 	log?: (message: string, failure?: boolean) => void;
 };
+
+/** Module heading and raw linked resources extracted from Canvas's DOM. */
+type RawCanvasGroup = { title: string; items: { title: string; url: string; label: string }[] };
+/** Visible anchor title and absolute URL read from a Canvas page. */
+type RawCanvasLink = { title: string; url: string };
 const TEXT_EXTS = new Set([
 	'.asm',
 	'.bat',
@@ -105,6 +113,30 @@ const TEXT_EXTS = new Set([
 	'.yaml',
 	'.yml',
 ]);
+
+/**
+ * Absorbs an expected failure from a best-effort Canvas page wait.
+ *
+ * @return `undefined` so optional page transitions do not stop collection.
+ */
+function ignoreCanvasWaitFailure(): undefined {
+	return undefined;
+}
+
+/**
+ * Reports a missing optional Canvas visibility check as not visible.
+ *
+ * @return `false` so a transient locator timeout does not make the page appear ready.
+ */
+function ignoreCanvasVisibilityFailure(): false {
+	return false;
+}
+
+/**
+ * Discards a progress or failure message when export logging is disabled.
+ */
+function ignoreCanvasLog(): void {}
+
 /*//////////////////////////////////////////////////
 HELPERS
 //////////////////////////////////////////////////*/
@@ -204,10 +236,22 @@ export function canvasCourseUrl(value: string): string | undefined {
 	}
 }
 
+/**
+ * Removes credential and query data from URLs embedded in progress and error messages.
+ *
+ * @param value - Message text that may contain Canvas URLs.
+ * @return Message text with each detected URL sanitized.
+ */
 function sMessage(value: unknown): string {
-	return String(value).replace(/https?:\/\/[^\s"'<>]+/g, (candidate) => safeCanvasUrl(candidate));
+	return String(value).replace(/https?:\/\/[^\s"'<>]+/g, safeCanvasUrl);
 }
 
+/**
+ * Produces a stable filesystem component from a course, group, or resource title.
+ *
+ * @param value - Canvas display name.
+ * @return Lowercase ASCII name with a safe fallback.
+ */
 function sName(value: string): string {
 	return (
 		value
@@ -317,47 +361,53 @@ export async function downloadCanvasFile(request: APIRequestContext, value: stri
  * @return Unique courses, filtered to semester-like titles unless all are requested.
  */
 export async function discoverCanvasCourses(page: Page, initialUrl: string, options: { includeAllCourses?: boolean; dashboardScope?: boolean } = {}): Promise<CanvasCourse[]> {
-	await page.waitForLoadState('networkidle').catch(() => undefined);
-	await page
-		.locator('.ic-DashboardCard__link, .ic-DashboardCard a[href], a[href*="/courses/"]')
-		.first()
-		.waitFor({ state: 'attached', timeout: 15_000 })
-		.catch(() => undefined);
-	const collect = async (selector: string): Promise<CanvasCourse[]> =>
-		page.locator(selector).evaluateAll((nodes) =>
-			nodes.flatMap((node) => {
+	await page.waitForLoadState('networkidle').catch(ignoreCanvasWaitFailure);
+	await page.locator('.ic-DashboardCard__link, .ic-DashboardCard a[href], a[href*="/courses/"]').first().waitFor({ state: 'attached', timeout: 15_000 }).catch(ignoreCanvasWaitFailure);
+	/**
+	 * Reads course links matching one selector from the current page.
+	 *
+	 * @param selector - CSS selector for dashboard or course links.
+	 * @return Canonical course records extracted from those links.
+	 */
+	async function collectCourses(selector: string): Promise<CanvasCourse[]> {
+		// Extracts canonical course links from Canvas elements in a browser page.
+		return page.locator(selector).evaluateAll(function (nodes: Element[]): CanvasCourse[] {
+			const courses: CanvasCourse[] = [];
+			for (const node of nodes) {
 				const link = node as HTMLAnchorElement;
 				const url = new URL(link.href);
 				const match = url.pathname.match(/^\/courses\/(\d+)\/?$/);
-				if (!match) return [];
-				return [
-					{
-						title:
-							link.querySelector('[data-testid="dashboard-card-title"]')?.getAttribute('title')?.trim() ||
-							link.getAttribute('title')?.trim() ||
-							link.textContent?.trim() ||
-							link.getAttribute('aria-label')?.trim() ||
-							`Course ${match[1]}`,
-						url: `${url.origin}/courses/${match[1]}`,
-					},
-				];
-			}),
-		);
-	const dashboardCourses = await collect('.ic-DashboardCard__link[href]');
-	let found = dashboardCourses.length ? dashboardCourses : await collect('a[href]');
+				if (!match) continue;
+				courses.push({
+					title:
+						link.querySelector('[data-testid="dashboard-card-title"]')?.getAttribute('title')?.trim() ||
+						link.getAttribute('title')?.trim() ||
+						link.textContent?.trim() ||
+						link.getAttribute('aria-label')?.trim() ||
+						`Course ${match[1]}`,
+					url: `${url.origin}/courses/${match[1]}`,
+				});
+			}
+			return courses;
+		});
+	}
+	const dashboardCourses = await collectCourses('.ic-DashboardCard__link[href]');
+	let found = dashboardCourses.length ? dashboardCourses : await collectCourses('a[href]');
 	if (!found.length && options.dashboardScope) return [];
 	if (!found.length && !/^\/courses(?:\/|$)/.test(new URL(page.url()).pathname)) {
 		await page.goto(new URL('/courses', initialUrl).href, { waitUntil: 'domcontentloaded' });
-		await page.waitForLoadState('networkidle').catch(() => undefined);
-		found = await collect('a[href]');
+		await page.waitForLoadState('networkidle').catch(ignoreCanvasWaitFailure);
+		found = await collectCourses('a[href]');
 	}
-	return [...new Map(found.map((course) => [course.url, course])).values()].filter(
-		(course) =>
-			options.includeAllCourses ||
-			/\b(?:(?:autumn|spring|summer|winter)\s+\d{4}|\d{4}\s+(?:autumn|spring|summer|winter)|(?:semester|term)\s+\d{1,2}\s+\d{4}|\d{4}\s+(?:semester|term)\s+\d{1,2})\b/i.test(
-				course.title,
-			),
-	);
+	const uniqueCourses = new Map<string, CanvasCourse>();
+	for (const course of found) uniqueCourses.set(course.url, course);
+	if (options.includeAllCourses) return [...uniqueCourses.values()];
+	const semesterCourses: CanvasCourse[] = [];
+	for (const course of uniqueCourses.values()) {
+		if (/\b(?:(?:autumn|spring|summer|winter)\s+\d{4}|\d{4}\s+(?:autumn|spring|summer|winter)|(?:semester|term)\s+\d{1,2}\s+\d{4}|\d{4}\s+(?:semester|term)\s+\d{1,2})\b/i.test(course.title))
+			semesterCourses.push(course);
+	}
+	return semesterCourses;
 }
 
 /**
@@ -369,46 +419,41 @@ export async function discoverCanvasCourses(page: Page, initialUrl: string, opti
  * @return Module groups with resources classified as files, pages, or links.
  */
 export async function getCanvasModuleGroups(page: Page, matches: string[] = []): Promise<CanvasGroup[]> {
-	await page
-		.locator('#context_modules')
-		.waitFor({ state: 'visible', timeout: 10_000 })
-		.catch(() => undefined);
-	const found = await page
-		.locator('#context_modules .context_module')
-		.evaluateAll((nodes) =>
-			nodes.map((node) => ({
-				title: node.querySelector('.name')?.textContent?.trim() || node.querySelector('h2')?.textContent?.trim() || '',
-				items: Array.from(node.querySelectorAll<HTMLAnchorElement>('.ig-row a[href], .context_module_item a[href]')).map((link) => ({
-					title: link.textContent?.trim() || 'Untitled resource',
-					url: link.href,
-					label: link.closest('.ig-row, .context_module_item')?.textContent || '',
-				})),
-			})),
-		);
-	return (matches.length ? found.filter((group) => matches.some((match) => group.title.toLowerCase().includes(match.toLowerCase()))) : found).map((group) => ({
-		title: group.title,
-		items: group.items.map((i) => ({
-			title: i.title,
-			url: i.url,
-			type: /attachment|file/i.test(i.label)
-				? 'file'
-				: /page/i.test(i.label) || /\/courses\/\d+\/pages\//.test(i.url)
-					? 'page'
-					: /\/files\/|download(?:\?|$)/.test(i.url)
-						? 'file'
-						: 'link',
-		})),
-	}));
+	await page.locator('#context_modules').waitFor({ state: 'visible', timeout: 10_000 }).catch(ignoreCanvasWaitFailure);
+	// Extracts raw module headings and linked resources from Canvas DOM nodes.
+	const found = await page.locator('#context_modules .context_module').evaluateAll(function (nodes: Element[]): RawCanvasGroup[] {
+		const groups: RawCanvasGroup[] = [];
+		for (const node of nodes) {
+			const group: RawCanvasGroup = { title: node.querySelector('.name')?.textContent?.trim() || node.querySelector('h2')?.textContent?.trim() || '', items: [] };
+			for (const link of node.querySelectorAll<HTMLAnchorElement>('.ig-row a[href], .context_module_item a[href]')) {
+				group.items.push({ title: link.textContent?.trim() || 'Untitled resource', url: link.href, label: link.closest('.ig-row, .context_module_item')?.textContent || '' });
+			}
+			groups.push(group);
+		}
+		return groups;
+	});
+	const groups: CanvasGroup[] = [];
+	for (const group of found) {
+		if (matches.length) {
+			let selected = false;
+			for (const match of matches) {
+				if (group.title.toLowerCase().includes(match.toLowerCase())) selected = true;
+			}
+			if (!selected) continue;
+		}
+		const items: CanvasItem[] = [];
+		for (const item of group.items) {
+			let type: CanvasItem['type'] = 'link';
+			if (/attachment|file/i.test(item.label)) type = 'file';
+			else if (/page/i.test(item.label) || /\/courses\/\d+\/pages\//.test(item.url)) type = 'page';
+			else if (/\/files\/|download(?:\?|$)/.test(item.url)) type = 'file';
+			items.push({ title: item.title, url: item.url, type });
+		}
+		groups.push({ title: group.title, items });
+	}
+	return groups;
 }
 
-/**
- * Opens a Canvas page item and collects its readable text and linked files.
- *
- * @param page - Authenticated Playwright page to navigate.
- * @param item - Canvas page item discovered from a module group.
- *
- * @return Page text and file links found in its body.
- */
 /**
  * Reads a Canvas page item and returns its text and linked Canvas files.
  *
@@ -419,43 +464,65 @@ export async function getCanvasModuleGroups(page: Page, matches: string[] = []):
  */
 export async function readCanvasPage(page: Page, item: CanvasItem): Promise<{ text: string; files: CanvasItem[] }> {
 	await page.goto(item.url, { waitUntil: 'domcontentloaded' });
-	await page.waitForURL((url) => !url.pathname.includes('/modules/items/'), { timeout: 30_000 }).catch(() => undefined);
-	await page.waitForLoadState('networkidle').catch(() => undefined);
+	// Checks whether the current URL has left Canvas's transient module-item route.
+	await page
+		.waitForURL(
+			function (url: URL): boolean {
+				return !url.pathname.includes('/modules/items/');
+			},
+			{ timeout: 30_000 },
+		)
+		.catch(ignoreCanvasWaitFailure);
+	await page.waitForLoadState('networkidle').catch(ignoreCanvasWaitFailure);
+	// Detects readable Canvas body content while a page is loading.
 	await page
 		.waitForFunction(
-			() =>
-				['#content', '#wiki_page_show .show-content', '.show-content', 'main'].some((selector) =>
-					[...document.querySelectorAll(selector)].some((element) => element.textContent?.trim()),
-				),
+			function (): boolean {
+				for (const selector of ['#content', '#wiki_page_show .show-content', '.show-content', 'main']) {
+					for (const element of document.querySelectorAll(selector)) {
+						if (element.textContent?.trim()) return true;
+					}
+				}
+				return false;
+			},
 			null,
 			{ timeout: 30_000 },
 		)
-		.catch(() => undefined);
-	const bodyText = await page.evaluate(
-		() =>
-			['#content', '#wiki_page_show .show-content', '.show-content', 'main']
-				.flatMap((selector) => [...document.querySelectorAll<HTMLElement>(selector)])
-				.filter((element) => element.textContent?.trim() && element.getBoundingClientRect().height > 0)
-				.sort((left, right) => (right.innerText?.length || 0) - (left.innerText?.length || 0))[0]
-				?.innerText.trim() || '',
-	);
+		.catch(ignoreCanvasWaitFailure);
+	// Reads the visible Canvas content container with the most text.
+	const bodyText = await page.evaluate(function (): string {
+		let largestText = '';
+		for (const selector of ['#content', '#wiki_page_show .show-content', '.show-content', 'main']) {
+			for (const element of document.querySelectorAll<HTMLElement>(selector)) {
+				const text = element.innerText?.trim() || '';
+				if (text && element.getBoundingClientRect().height > 0 && text.length > largestText.length) largestText = text;
+			}
+		}
+		return largestText;
+	});
 	if (!bodyText) throw new Error(`Canvas page returned no readable content after redirect to ${safeCanvasUrl(page.url())}.`);
 	const seen = new Set<string>();
-	return {
-		text: `${item.title}\n${safeCanvasUrl(item.url)}\n\n${bodyText}`,
-		files: (
-			await page
-				.locator('#content, #wiki_page_show .show-content, .show-content, main')
-				.first()
-				.locator('a[href]')
-				.evaluateAll((nodes) => nodes.map((node) => ({ title: node.textContent?.trim() || '', url: (node as HTMLAnchorElement).href })))
-		).flatMap((link) => {
-			const fileUrl = canvasFileUrl(link.url);
-			if (!fileUrl || seen.has(fileUrl)) return [];
-			seen.add(fileUrl);
-			return [{ title: link.title || 'Untitled file', url: link.url, type: 'file' as const }];
-		}),
-	};
+	// Extracts link labels and absolute URLs from selected Canvas page elements.
+	const discoveredLinks = await page
+		.locator('#content, #wiki_page_show .show-content, .show-content, main')
+		.first()
+		.locator('a[href]')
+		.evaluateAll(function (nodes: Element[]): RawCanvasLink[] {
+			const links: RawCanvasLink[] = [];
+			for (const node of nodes) {
+				const link = node as HTMLAnchorElement;
+				links.push({ title: link.textContent?.trim() || '', url: link.href });
+			}
+			return links;
+		});
+	const files: CanvasItem[] = [];
+	for (const link of discoveredLinks) {
+		const fileUrl = canvasFileUrl(link.url);
+		if (!fileUrl || seen.has(fileUrl)) continue;
+		seen.add(fileUrl);
+		files.push({ title: link.title || 'Untitled file', url: link.url, type: 'file' });
+	}
+	return { text: `${item.title}\n${safeCanvasUrl(item.url)}\n\n${bodyText}`, files };
 }
 
 /**
@@ -473,12 +540,15 @@ export async function scrapeCanvasGroup(options: {
 	output: string;
 	log?: (message: string, failure?: boolean) => void;
 }): Promise<ExportedGroup> {
-	const { page, request, course, group, log = () => undefined } = options;
+	const { page, request, course, group } = options;
+	const log = options.log || ignoreCanvasLog;
 	const folder = path.join(path.resolve(options.output), sName(course.title), sName(group.title));
 	await mkdir(folder, { recursive: true });
 	log(`staging ${course.title} / ${group.title} (${group.items.length} module items)`);
 	const record: ExportedGroup = { course: { title: course.title, url: safeCanvasUrl(course.url) }, title: group.title, files: [], textPath: '', links: [], text: '', errors: [] };
-	const items = [...new Map(group.items.map((i) => [i.url, i])).values()];
+	const uniqueItems = new Map<string, CanvasItem>();
+	for (const item of group.items) uniqueItems.set(item.url, item);
+	const items = [...uniqueItems.values()];
 	const downloaded = new Set<string>();
 	for (let index = 0; index < items.length; index++) {
 		const item = items[index];
@@ -534,7 +604,8 @@ export async function scrapeCanvasGroup(options: {
  * @return Captured module groups for the course.
  */
 export async function scrapeCanvasCourse(options: ScrapeCanvasCourseOptions): Promise<ExportedGroup[]> {
-	const { page, request, course, log = () => undefined } = options;
+	const { page, request, course } = options;
+	const log = options.log || ignoreCanvasLog;
 	await page.goto(`${canvasCourseUrl(course.url) || safeCanvasUrl(course.url)}/modules`, { waitUntil: 'domcontentloaded' });
 	const selected = await getCanvasModuleGroups(page, options.groupMatches || []);
 	if (!selected.length) {
@@ -573,28 +644,15 @@ export function normalizeCanvasUrl(value: string): string {
  */
 export async function isCanvasReady(page: Page): Promise<boolean> {
 	if (/\/(?:login|saml|auth)(?:\/|$)/i.test(new URL(page.url()).pathname)) return false;
+	if (await page.locator('#context_modules').isVisible({ timeout: 1_000 }).catch(ignoreCanvasVisibilityFailure)) return true;
 	if (
-		await page
-			.locator('#context_modules')
-			.isVisible({ timeout: 1_000 })
-			.catch(() => false)
-	)
-		return true;
-	if (
-		await page
-			.locator('.ic-DashboardCard__link[href], .ic-DashboardCard a[href], a[href="/courses"], a[href^="/courses?"]')
-			.first()
-			.isVisible({ timeout: 1_000 })
-			.catch(() => false)
+		await page.locator('.ic-DashboardCard__link[href], .ic-DashboardCard a[href], a[href="/courses"], a[href^="/courses?"]').first().isVisible({ timeout: 1_000 }).catch(ignoreCanvasVisibilityFailure)
 	)
 		return true;
 	const course = canvasCourseUrl(page.url());
 	if (!course) return false;
-	await page.goto(`${course}/modules`, { waitUntil: 'domcontentloaded' }).catch(() => undefined);
-	return page
-		.locator('#context_modules')
-		.isVisible({ timeout: 5_000 })
-		.catch(() => false);
+	await page.goto(`${course}/modules`, { waitUntil: 'domcontentloaded' }).catch(ignoreCanvasWaitFailure);
+	return page.locator('#context_modules').isVisible({ timeout: 5_000 }).catch(ignoreCanvasVisibilityFailure);
 }
 
 /**
@@ -610,16 +668,23 @@ export async function scrapeCanvas(options: CanvasScrapeOptions): Promise<Canvas
 	const headed = options.headed || false;
 	const logs: string[] = [];
 	/**
-	 * Records one sanitized progress or error message for the export.
+	 * Records one sanitized progress or error message for this export.
 	 *
 	 * @param message - Progress or error text before URL sanitization.
 	 * @param failure - Whether this message represents an export failure.
 	 */
-	const log = (message: string, failure = false): void => {
+	function log(message: string, failure = false): void {
 		const line = '[canvas-export] ' + sMessage(message);
 		logs.push(line);
-		(options.log || ((value: string, isFailure?: boolean) => (isFailure ? console.error(value) : console.log(value))))(line, failure);
-	};
+		// Writes a message through the default export logger.
+		(
+			options.log ||
+			function (message: string, failure = false): void {
+				if (failure) console.error(message);
+				else console.log(message);
+			}
+		)(line, failure);
+	}
 	let session: Awaited<ReturnType<typeof authenticateWorkflow<Page>>> | undefined;
 	try {
 		log('starting download export from ' + safeCanvasUrl(source));
@@ -629,7 +694,8 @@ export async function scrapeCanvas(options: CanvasScrapeOptions): Promise<Canvas
 			headed,
 			interactive: options.interactive ?? headed,
 			timeoutMs: 15 * 60_000,
-			open: async (context) => {
+			createSession: options.createSession,
+			open: async (context: import('playwright').BrowserContext): Promise<Page> => {
 				const page = await context.newPage();
 				await page.goto(source, { waitUntil: 'domcontentloaded' });
 				const directCourse = canvasCourseUrl(source);
@@ -653,7 +719,9 @@ export async function scrapeCanvas(options: CanvasScrapeOptions): Promise<Canvas
 		const manifest: CanvasExportManifest = { source: safeCanvasUrl(source), mode: 'download', courses: [], groups: [] };
 		for (const course of courses) {
 			const groups = await scrapeCanvasCourse({ page, request: session.context.request, course, output, groupMatches: options.groupMatches, log });
-			manifest.courses.push({ title: course.title, url: safeCanvasUrl(course.url), groups: groups.map((group) => group.title) });
+			const groupTitles: string[] = [];
+			for (const group of groups) groupTitles.push(group.title);
+			manifest.courses.push({ title: course.title, url: safeCanvasUrl(course.url), groups: groupTitles });
 			manifest.groups.push(...groups);
 		}
 		await mkdir(output, { recursive: true });
@@ -664,8 +732,8 @@ export async function scrapeCanvas(options: CanvasScrapeOptions): Promise<Canvas
 	} catch (err) {
 		const message = sMessage(err instanceof Error ? err.message : err);
 		log(message, true);
-		await mkdir(output, { recursive: true }).catch(() => undefined);
-		await writeFile(path.join(output, 'canvas-export.log'), logs.join('\n') + '\n').catch(() => undefined);
+		await mkdir(output, { recursive: true }).catch(ignoreCanvasWaitFailure);
+		await writeFile(path.join(output, 'canvas-export.log'), logs.join('\n') + '\n').catch(ignoreCanvasWaitFailure);
 		throw new Error(message, { cause: err });
 	} finally {
 		await session?.close();
