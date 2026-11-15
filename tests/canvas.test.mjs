@@ -12,6 +12,7 @@ import {
 	canvasResponseFileName,
 	discoverCanvasCourses,
 	getCanvasModuleGroups,
+	hasCanvasPageContent,
 	inferCanvasFileName,
 	isCanvasReady,
 	isCanvasPreviewBody,
@@ -220,6 +221,11 @@ test('Canvas page reading returns visible text and canonical file links', async 
 
 	assert.equal(content.text, 'Week One\nhttps://canvas.example/courses/9/pages/intro\n\nCanvas course page text');
 	assert.deepEqual(content.files, [{ title: 'Slides', url: 'https://canvas.example/courses/9/files/44', type: 'file' }]);
+});
+
+test('Canvas navigation-only pages are not treated as captured source material', () => {
+	assert.equal(hasCanvasPageContent('Week8 Lecture Recording\nhttps://canvas.example/courses/9/modules/items/2\n\nWeek8 Lecture Recording\n\nPrevious\nNext', 'Week8 Lecture Recording'), false);
+	assert.equal(hasCanvasPageContent('Introduction\nhttps://canvas.example/courses/9/pages/intro\n\nIntroduction\nRead the subject guide.\nPrevious\nNext', 'Introduction'), true);
 });
 
 test('Canvas export uses the injected session and writes a local manifest and download', async () => {

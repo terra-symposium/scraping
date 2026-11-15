@@ -11,17 +11,19 @@ import os from 'node:os';
 import path from 'node:path';
 import { authenticateWorkflow, resolveWorkflowStorageStatePath } from './workflows/browser.js';
 import { mkdir, writeFile } from 'node:fs/promises';
+import { checkCollection, safeSourceUrl } from './collection.js';
 
 // TYPES
 import type { APIRequestContext, APIResponse, Page } from 'playwright';
 import type { WorkflowBrowserSession, WorkflowSessionFactoryOptions } from './workflows/browser.js';
+import type { CollectedItem } from './collection.js';
 
 /*//////////////////////////////////////////////////
 CONFIG
 //////////////////////////////////////////////////*/
 
 /** One file, page, or external link discovered in a Canvas module group. */
-export type CanvasItem = { title: string; url: string; type: 'file' | 'page' | 'link' };
+export type CanvasItem = { title: string; url: string; type: 'file' | 'page' | 'link' | 'restricted'; parentSourceId?: string };
 /** A Canvas course with its display title and canonical course URL. */
 export type CanvasCourse = { title: string; url: string };
 /** A Canvas course module and the resources listed inside it. */
@@ -29,7 +31,7 @@ export type CanvasGroup = { title: string; items: CanvasItem[] };
 /** A locally saved Canvas file with its optional sanitized source URL. */
 export type CanvasFile = { path: string; name: string; sourceUrl?: string };
 /** Captured files, text, links, and per-item errors from one module group. */
-export type ExportedGroup = { course: CanvasCourse; title: string; files: CanvasFile[]; textPath: string; links: string[]; text: string; errors: string[] };
+export type ExportedGroup = { course: CanvasCourse; title: string; files: CanvasFile[]; textPath: string; links: string[]; text: string; errors: string[]; items: CollectedItem[] };
 /** Complete local Canvas export manifest with course and module summaries. */
 export type CanvasExportManifest = { source: string; mode: 'download'; courses: { title: string; url: string; groups: string[] }[]; groups: ExportedGroup[] };
 /** Browser, course-selection, output, and logging options for a Canvas export. */
@@ -58,7 +60,7 @@ export type ScrapeCanvasCourseOptions = {
 };
 
 /** Module heading and raw linked resources extracted from Canvas's DOM. */
-type RawCanvasGroup = { title: string; items: { title: string; url: string; label: string }[] };
+type RawCanvasGroup = { title: string; items: { title: string; url: string; label: string; restricted?: boolean }[] };
 /** Visible anchor title and absolute URL read from a Canvas page. */
 type RawCanvasLink = { title: string; url: string };
 const TEXT_EXTS = new Set([
@@ -150,12 +152,7 @@ HELPERS
  */
 export function safeCanvasUrl(value: string): string {
 	try {
-		const url = new URL(value);
-		url.username = '';
-		url.password = '';
-		url.search = '';
-		url.hash = '';
-		return url.href;
+		return safeSourceUrl(value);
 	} catch {
 		return String(value).replace(/([?#]).*$/, '');
 	}
@@ -428,6 +425,17 @@ export async function getCanvasModuleGroups(page: Page, matches: string[] = []):
 			for (const link of node.querySelectorAll<HTMLAnchorElement>('.ig-row a[href], .context_module_item a[href]')) {
 				group.items.push({ title: link.textContent?.trim() || 'Untitled resource', url: link.href, label: link.closest('.ig-row, .context_module_item')?.textContent || '' });
 			}
+			for (const row of node.querySelectorAll<HTMLElement>('.ig-row, .context_module_item')) {
+				if (!row.querySelector || row.querySelector('a[href]')) continue;
+				const title = row.querySelector('.item_name, .ig-title, .title')?.textContent?.trim() || row.textContent?.trim() || '';
+				if (title && (/lock|unpublish|unavailable|not available/i.test(row.textContent || '') || row.querySelector('[aria-label*="Lock"], .icon-lock, .unpublished')))
+					group.items.push({
+						title,
+						url: `${new URL(location.pathname, location.origin).href}#locked-${row.getAttribute('data-item-id') || row.id || `${group.title}-${title}`.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+						label: row.textContent || '',
+						restricted: true,
+					});
+			}
 			groups.push(group);
 		}
 		return groups;
@@ -444,7 +452,8 @@ export async function getCanvasModuleGroups(page: Page, matches: string[] = []):
 		const items: CanvasItem[] = [];
 		for (const item of group.items) {
 			let type: CanvasItem['type'] = 'link';
-			if (/attachment|file/i.test(item.label)) type = 'file';
+			if (item.restricted) type = 'restricted';
+			else if (/attachment|file/i.test(item.label)) type = 'file';
 			else if (/page/i.test(item.label) || /\/courses\/\d+\/pages\//.test(item.url)) type = 'page';
 			else if (/\/files\/|download(?:\?|$)/.test(item.url)) type = 'file';
 			items.push({ title: item.title, url: item.url, type });
@@ -526,6 +535,22 @@ export async function readCanvasPage(page: Page, item: CanvasItem): Promise<{ te
 }
 
 /**
+ * Detect Canvas pages that expose only their heading and module navigation.
+ * @param text - Captured page text, including its provenance header.
+ * @param title - Module item's visible title.
+ * @return Whether the page contains source material beyond its shell.
+ */
+export function hasCanvasPageContent(text: string, title: string): boolean {
+	return text
+		.split('\n\n')
+		.slice(1)
+		.join('\n\n')
+		.split('\n')
+		.map(line => line.trim())
+		.some(line => line && line !== title && line !== 'Previous' && line !== 'Next');
+}
+
+/**
  * Scrapes one authenticated Canvas module group and writes its source files locally.
  *
  * @param options - Authenticated Canvas resources, module group, output path, and logger.
@@ -545,23 +570,56 @@ export async function scrapeCanvasGroup(options: {
 	const folder = path.join(path.resolve(options.output), sName(course.title), sName(group.title));
 	await mkdir(folder, { recursive: true });
 	log(`staging ${course.title} / ${group.title} (${group.items.length} module items)`);
-	const record: ExportedGroup = { course: { title: course.title, url: safeCanvasUrl(course.url) }, title: group.title, files: [], textPath: '', links: [], text: '', errors: [] };
-	const uniqueItems = new Map<string, CanvasItem>();
-	for (const item of group.items) uniqueItems.set(item.url, item);
-	const items = [...uniqueItems.values()];
+	const record: ExportedGroup = { course: { title: course.title, url: safeCanvasUrl(course.url) }, title: group.title, files: [], textPath: '', links: [], text: '', errors: [], items: [] };
+	const items = [...group.items];
 	const downloaded = new Set<string>();
+	const seen = new Set<string>();
 	for (let index = 0; index < items.length; index++) {
 		const item = items[index];
+		const identity = canvasFileUrl(item.url) || safeCanvasUrl(item.url);
+		const sourceId = canvasSourceKey(identity);
+		const entry: CollectedItem = {
+			sourceId,
+			title: item.title,
+			section: group.title,
+			safeUrl: safeCanvasUrl(identity),
+			type: item.type,
+			status: 'inaccessible',
+			localPath: null,
+			reason: 'Capture did not complete.',
+			...(item.parentSourceId ? { parentSourceId: item.parentSourceId } : {}),
+		};
+		record.items.push(entry);
+		if (seen.has(sourceId)) {
+			entry.status = 'duplicate';
+			entry.reason = 'Source already listed in this module.';
+			continue;
+		}
+		seen.add(sourceId);
 		try {
 			if (item.type === 'page') {
 				log(`reading page ${item.title}`);
 				const content = await readCanvasPage(page, item);
+				if (!hasCanvasPageContent(content.text, item.title) && content.files.length === 0) {
+					entry.status = 'linked';
+					entry.reason = 'Canvas page exposes only its heading and module navigation; source content is unavailable.';
+					record.links.push(entry.safeUrl);
+					continue;
+				}
 				record.text += `${record.text ? '\n\n---\n\n' : ''}${content.text}`;
-				items.push(...content.files);
+				const pagePath = path.join(folder, `${sName(group.title)}-${index}-${sName(item.title)}.txt`);
+				await writeFile(pagePath, content.text);
+				entry.localPath = pagePath;
+				entry.status = 'captured';
+				entry.reason = null;
+				items.push(...content.files.map(file => ({ ...file, parentSourceId: sourceId })));
 			} else if (item.type === 'file') {
 				const source = canvasFileUrl(item.url);
-				const identity = source || safeCanvasUrl(item.url);
-				if (downloaded.has(identity)) continue;
+				if (downloaded.has(identity)) {
+					entry.status = 'duplicate';
+					entry.reason = 'File already downloaded in this module.';
+					continue;
+				}
 				downloaded.add(identity);
 				log(`downloading ${item.title}`);
 				const response = await downloadCanvasFile(request, item.url);
@@ -577,14 +635,23 @@ export async function scrapeCanvasGroup(options: {
 					if (isCanvasPreviewBody(body, headers['content-type'] || '')) throw new Error('Canvas returned an HTML preview instead of the file download.');
 					await writeFile(filePath, body);
 					record.files.push({ path: filePath, name: fileName, sourceUrl: source ? safeCanvasUrl(source) : undefined });
+					entry.localPath = filePath;
+					entry.status = 'captured';
+					entry.reason = null;
 				} finally {
 					await response.dispose();
 				}
+			} else if (item.type === 'restricted') {
+				entry.status = 'restricted';
+				entry.reason = 'Canvas did not expose an accessible source link.';
 			} else {
 				record.links.push(safeCanvasUrl(item.url));
+				entry.status = 'linked';
+				entry.reason = null;
 			}
 		} catch (err) {
 			const message = `${item.title}: ${sMessage(err instanceof Error ? err.message : err)}`;
+			entry.reason = sMessage(err instanceof Error ? err.message : err);
 			record.errors.push(message);
 			log(message, true);
 		}
@@ -593,6 +660,8 @@ export async function scrapeCanvasGroup(options: {
 	await writeFile(textPath, record.text);
 	record.textPath = textPath;
 	record.files.unshift({ path: textPath, name: path.basename(textPath) });
+	const coverageErrs = await checkCollection(record.items);
+	if (coverageErrs.length) record.errors.push(...coverageErrs);
 	return record;
 }
 
@@ -724,6 +793,14 @@ export async function scrapeCanvas(options: CanvasScrapeOptions): Promise<Canvas
 			manifest.courses.push({ title: course.title, url: safeCanvasUrl(course.url), groups: groupTitles });
 			manifest.groups.push(...groups);
 		}
+		const seenSources = new Set<string>();
+		for (const group of manifest.groups)
+			for (const item of group.items) {
+				if (seenSources.has(item.sourceId)) {
+					item.status = 'duplicate';
+					item.reason = 'Source already listed in another module.';
+				} else seenSources.add(item.sourceId);
+			}
 		await mkdir(output, { recursive: true });
 		await writeFile(path.join(output, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
 		log('download export complete: ' + manifest.groups.length + ' module groups written to ' + output);

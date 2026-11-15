@@ -1,7 +1,6 @@
 # Scraping
 
-Scraping helps Terra projects collect permitted course and syllabus information through repeatable
-browser tasks.
+Scraping helps Terra projects collect permitted course and syllabus information through repeatable browser tasks.
 
 ## Get started
 
@@ -13,15 +12,14 @@ pnpm run build
 pnpm exec playwright install chromium
 ```
 
-The package's full setup and API reference are in the
-[Scraping docs](config/docs/01-scraping/01-getting-started/01-overview.mdx).
+The package's full setup and API reference are in the [Scraping docs](config/docs/01-scraping/01-getting-started/01-overview.mdx).
 
 ## Usage
 
 Consumers pin a reviewed Git tag:
 
 ```sh
-pnpm add 'github:Terra-Symposium/scraping#v0.2.0'
+pnpm add 'github:Terra-Symposium/scraping#v0.3.0'
 ```
 
 Run the command for the task at hand:
@@ -32,17 +30,13 @@ pnpm exec syllabus-fetch --state=NSW --headed
 pnpm exec canvas-transcripts --input=SOURCE --output=RESULT --weeks=12
 ```
 
-The first headed Canvas run can complete a normal sign-in; later runs can reuse saved state. See
-[browser sessions](config/docs/01-scraping/02-guides/01-browser-sessions.mdx),
-[parallel work](config/docs/01-scraping/02-guides/02-parallel-work.mdx), and the
-[API reference](config/docs/01-scraping/03-reference/index.mdx) for application integration.
+The first headed Canvas run can complete a normal sign-in; later runs can reuse saved state. See [browser sessions](config/docs/01-scraping/02-guides/01-browser-sessions.mdx), [parallel work](config/docs/01-scraping/02-guides/02-parallel-work.mdx), and the [API reference](config/docs/01-scraping/03-reference/index.mdx) for application integration.
+
+Canvas and syllabus collectors return item-level provenance records with stable source IDs, safe URLs, retrieval status, and local paths. A consumer can reconcile these records into its own content layout; Scraping never edits its notes. Uni exposes this through `pnpm run canvas:sync`.
 
 ## Configuration
 
-Browser state lives outside the repository by default and contains credentials. Keep it private.
-`PW_WORKERS`, `PW_HEADED_WORKERS`, and `PW_<DOMAIN>_WORKERS` limit parallel work. The
-[browser guide](config/docs/01-scraping/02-guides/01-browser-sessions.mdx) covers state paths and
-session lifecycle.
+Browser state lives outside the repository by default and contains credentials. Keep it private. `PW_WORKERS`, `PW_HEADED_WORKERS`, and `PW_<DOMAIN>_WORKERS` limit parallel work. The [browser guide](config/docs/01-scraping/02-guides/01-browser-sessions.mdx) covers state paths and session lifecycle.
 
 ## Validation
 
@@ -53,19 +47,13 @@ session lifecycle.
 | `pnpm run test`        | Project test suite            |
 | `pnpm run build`       | Build output                  |
 
-Quality can apply safe fixes; review the diff before committing. No separate browser or Playwright
-test command is defined here.
+Quality can apply safe fixes; review the diff before committing. No separate browser or Playwright test command is defined here.
 
 ## Contributing
 
-`src/workflows/` owns shared browser and concurrency behavior; service-specific selectors belong in
-their adapters. The
-[quality and release guide](config/docs/01-scraping/04-maintenance/01-quality-and-release.mdx)
-describes the checks and Git-tag release process.
+`src/workflows/` owns shared browser and concurrency behavior; service-specific selectors belong in their adapters. The [quality and release guide](config/docs/01-scraping/04-maintenance/01-quality-and-release.mdx) describes the checks and Git-tag release process.
 
-Open a pull request against `development` and review the results of
-[`check.yml`](.github/workflows/check.yml) before merging. Keep unrelated changes out of the pull
-request.
+Open a pull request against `development` and review the results of [`check.yml`](.github/workflows/check.yml) before merging. Keep unrelated changes out of the pull request.
 
 ## Documentation
 

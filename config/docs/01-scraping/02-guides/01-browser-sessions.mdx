@@ -129,7 +129,7 @@ Website can use this hook to keep its Chrome channel or persistent-profile selec
 
 The shared helpers do not guess that a page is signed in. Consumers provide `open` and `isReady` callbacks for their own service. The Canvas command checks for Canvas course or module content; the syllabus workflow checks for a readable public curriculum page. Website retains its stricter Gemini, Sanity, and product-specific checks.
 
-These Playwright helpers support a user's own local workflow. Do not use them as an agent route for accessing Canvas; agent-led collection must follow the owning product's approved in-app browser workflow.
+These Playwright helpers support a user's explicitly requested local collection workflow. The Canvas collector opens a headed browser for interactive sign-in when needed. It collects only material visible to the signed-in account, records restricted or inaccessible items as incomplete, and keeps browser state outside the repository. Consumers supply their own course routing and environment values.
 
 ## API reference
 

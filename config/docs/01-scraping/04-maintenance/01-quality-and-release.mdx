@@ -26,7 +26,7 @@ Run the complete quality wrapper from the repository root:
 pnpm run quality
 ```
 
-The wrapper runs formatting, dead-code analysis, lint, source analysis, React error-boundary checks, import validation, naming, aliases, forwarding, documentation checks, the package build, the Docs build, and repository-diff validation. No standalone test suite is configured.
+Quality runs the configured static checks. Run `pnpm run test` for the package build and test suite, and `pnpm --dir config run build` for the Docs site. `pnpm run verify` runs full-scope Quality and the package tests.
 
 To build only one artifact, use `pnpm run build` for the TypeScript package or `pnpm --dir config run build` for the Docs site at `config/dist/docs`. |||
 
@@ -53,9 +53,9 @@ For live source editing, run `pnpm --dir config run docs`. With the currently in
 |||[Release a package tag]
 
 1. Update the package version in the root `package.json`.
-2. Run `pnpm run quality` and review the package and Docs changes.
+2. Run `pnpm run quality:all`, `pnpm run test`, and `pnpm --dir config run build`; review the diff.
 3. Commit the release change and create the matching `vX.Y.Z` Git tag.
 4. Push the branch and tag to `Terra-Symposium/scraping`.
-5. Update the Website and Uni Notes Git dependency pins and lockfiles.
+5. Update consuming Git dependency pins and lockfiles after checking which repositories need the release.
 
 Consumers install the package from Git. No npm publish or repository CI workflow is configured. Keep the Git tag and package version aligned so each consumer lockfile resolves the intended commit. No hosted Docs deployment is configured. |||

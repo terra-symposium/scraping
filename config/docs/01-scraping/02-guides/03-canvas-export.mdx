@@ -37,7 +37,7 @@ The Canvas workflow discovers courses and module groups visible to a signed-in u
 Install a reviewed Git tag and Playwright Chromium in the consuming repository:
 
 ```sh
-pnpm add 'github:Terra-Symposium/scraping#v0.2.0'
+pnpm add 'github:Terra-Symposium/scraping#v0.3.0'
 pnpm exec playwright install chromium
 ```
 
@@ -132,12 +132,13 @@ Pass the `Page` and `APIRequestContext` from the same authenticated `BrowserCont
   <course-name>/
     <module-name>/
       <module-name>.txt
+      <page-id>-<page-title>.txt
       <file-id>-<safe-file-name>
 ```
 
-The exporter uses Unicode-normalized lowercase slugs for course and module folders. Each module text file contains page titles, sanitized Canvas URLs, and readable page text. Direct and page-linked Canvas files are downloaded through the authenticated request context. External links are recorded in the group's `links` array and are not fetched. Duplicate course-file URLs are downloaded once within each group.
+The exporter uses Unicode-normalized lowercase slugs for course and module folders. Each module text file combines the readable pages, and each page has its own text file for source-level reconciliation. Direct and page-linked Canvas files are downloaded through the authenticated request context. External links are recorded but not fetched. Duplicate course-file URLs are downloaded once within each group.
 
-The manifest records the sanitized source URL, selected course and group summaries, saved files, page text, external links, and item-level errors. The log contains progress and failures with credentials, query strings, and fragments removed.
+The manifest records the sanitized source URL, selected course and group summaries, saved files, page text, external links, and one `CollectedItem` per visible source item. Each record includes a stable source ID, title, module, safe URL, type, status, optional local path, and a reason for failures or exclusions. The log contains progress and failures with credentials, query strings, and fragments removed.
 
 A failed resource is recorded and logged; later items continue. Top-level failures such as an invalid URL, failed authentication, or no matching courses throw an error. The package writes the sanitized log even after a top-level failure and always closes a browser session it owns. The complete behavior is described in the [Canvas API reference](/01-scraping/03-reference/01-canvas/#complete-export-behavior).
 

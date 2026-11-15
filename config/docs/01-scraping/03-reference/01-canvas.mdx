@@ -7,15 +7,15 @@ Import from `@terra-symposium/scraping/canvas` or the package root, `@terra-symp
 
 ## Exported types
 
-| Type                   | Shape and purpose                                                                                                   |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `CanvasItem`           | `title`, `url`, and `type`, where type is `file`, `page`, or `link`.                                                |
-| `CanvasCourse`         | Display `title` and canonical course `url`.                                                                         |
-| `CanvasGroup`          | Module `title` and its `items: CanvasItem[]`.                                                                       |
-| `CanvasFile`           | Absolute local `path`, saved `name`, and optional sanitized `sourceUrl`.                                            |
-| `ExportedGroup`        | `course`, module `title`, saved `files`, `textPath`, external `links`, combined page `text`, and per-item `errors`. |
-| `CanvasExportManifest` | Sanitized `source`, literal mode `download`, selected course summaries, and all exported `groups`.                  |
-| `CanvasScrapeResult`   | Absolute `output` directory, the `manifest`, and sanitized `logs`.                                                  |
+| Type                   | Shape and purpose                                                                                                                             |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CanvasItem`           | `title`, `url`, and `type`: `file`, `page`, `link`, or `restricted`; page-linked files also carry `parentSourceId`.                           |
+| `CanvasCourse`         | Display `title` and canonical course `url`.                                                                                                   |
+| `CanvasGroup`          | Module `title` and its `items: CanvasItem[]`.                                                                                                 |
+| `CanvasFile`           | Absolute local `path`, saved `name`, and optional sanitized `sourceUrl`.                                                                      |
+| `ExportedGroup`        | `course`, module `title`, saved `files`, `textPath`, external `links`, combined page `text`, per-item `errors`, and `items: CollectedItem[]`. |
+| `CanvasExportManifest` | Sanitized `source`, literal mode `download`, selected course summaries, and all exported `groups`.                                            |
+| `CanvasScrapeResult`   | Absolute `output` directory, the `manifest`, and sanitized `logs`.                                                                            |
 
 ## Choose the collection level
 
@@ -69,12 +69,15 @@ The top-level exporter stores files under:
   <course-name>/
     <module-name>/
       <module-name>.txt
+      <page-id>-<page-title>.txt
       <file-id>-<safe-file-name>
 ```
 
-The default output directory is `~/Downloads/canvas-export`. Course and module folder names are Unicode-normalized lowercase slugs limited to 120 characters. Each module text file contains the title, sanitized Canvas page URL, and readable text for every Canvas page in that module. The group's `files` array includes this text file as well as downloaded attachments.
+The default output directory is `~/Downloads/canvas-export`. Course and module folder names are Unicode-normalized lowercase slugs limited to 120 characters. Each module text file combines the readable pages for convenience; each captured page also has its own text file. The group's `files` array includes the combined file and downloaded attachments.
 
-Page links discovered in a module group are read as text. Canvas course files listed directly in a group or linked from a captured Canvas page are downloaded through the authenticated request context. External links are recorded in the group's `links` array and are not fetched. Duplicate course-file URLs are downloaded once within a group.
+Each visible module item has a `CollectedItem` record with stable `sourceId`, title, module `section`, sanitized `safeUrl`, type, retrieval `status`, optional `localPath`, and a reason when unavailable. Page-linked attachments use `parentSourceId`. `checkCollection(items)` rejects missing fields, duplicate IDs that were not marked duplicate, missing captured files, and failures without reasons. A restricted item remains in the inventory even when it has no usable link.
+
+Page links discovered in a module group are read as text. A page showing only its heading and Canvas navigation is recorded as `linked` with an unavailable-content reason, not as captured text. Canvas course files listed directly in a group or linked from a captured Canvas page are downloaded through the authenticated request context. External links are recorded in the group's `links` array and are not fetched. Duplicate course-file URLs are downloaded once within a group.
 
 A failed resource is recorded in the group's `errors` array and logged; later items continue. Top-level failures such as an invalid URL, failed authentication, or no matching courses throw an error. The exporter writes the sanitized log even after a top-level failure, and always closes its owned browser session.
 

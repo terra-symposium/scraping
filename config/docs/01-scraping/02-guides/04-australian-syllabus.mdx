@@ -73,7 +73,7 @@ const syllabus = await fetchAustralianSyllabus({
 console.log(syllabus.filePath);
 ```
 
-The result includes the state code, sanitized source URL, absolute file path, saved basename, and ISO `capturedAt` timestamp. |||
+The result includes the state code, sanitized source URL, absolute file path, saved basename, ISO `capturedAt` timestamp, and a `CollectedItem` for provenance. |||
 
 The fetch workflow is headless and non-interactive by default. Setting `headed: true` requests a visible browser and allows sign-in unless `interactive` is explicitly false. Set `interactive: true` with headed omitted or false to start headlessly and open a browser only if the page is not ready. Each jurisdiction uses a separate state-file name outside the repository.
 

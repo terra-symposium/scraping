@@ -117,16 +117,16 @@ See the [parallel-work guide](/01-scraping/02-guides/02-parallel-work/) for conf
 
 ### Types and configured sources
 
-| Type or export                         | Shape and purpose                                                                                                            |
-| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `AustralianSyllabusState`              | One of `ACT`, `NSW`, `NT`, `QLD`, `SA`, `TAS`, `VIC`, or `WA`.                                                               |
-| `AustralianSyllabusSource`             | Required public page `url: string` and optional default `syllabusName: string`.                                              |
-| `AUSTRALIAN_SYLLABUS_SOURCES`          | Record mapping each jurisdiction to its configured source page. NSW defaults to `English K–10 (2022)`.                       |
-| `PrepareAustralianSyllabusPageOptions` | Optional NSW picker value `syllabusName: string`.                                                                            |
-| `FetchAustralianSyllabusOptions`       | Required `state` plus optional output, filename, selection, browser, state-file, timeout, and sign-in callback fields below. |
-| `FetchedAustralianSyllabus`            | `state`, sanitized `sourceUrl`, absolute `filePath`, `fileName`, and ISO `capturedAt` time.                                  |
-| `NormalizeSyllabusDocumentOptions`     | Optional `outputDirectory` and direct-document `fileName`.                                                                   |
-| `NormalizedSyllabusDocument`           | Absolute output `filePath`, `fileName`, input `sourcePath`, and optional ZIP `archiveEntry`.                                 |
+| Type or export                         | Shape and purpose                                                                                                             |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `AustralianSyllabusState`              | One of `ACT`, `NSW`, `NT`, `QLD`, `SA`, `TAS`, `VIC`, or `WA`.                                                                |
+| `AustralianSyllabusSource`             | Required public page `url: string` and optional default `syllabusName: string`.                                               |
+| `AUSTRALIAN_SYLLABUS_SOURCES`          | Record mapping each jurisdiction to its configured source page. NSW defaults to `English K–10 (2022)`.                        |
+| `PrepareAustralianSyllabusPageOptions` | Optional NSW picker value `syllabusName: string`.                                                                             |
+| `FetchAustralianSyllabusOptions`       | Required `state` plus optional output, filename, selection, browser, state-file, timeout, and sign-in callback fields below.  |
+| `FetchedAustralianSyllabus`            | `state`, sanitized `sourceUrl`, absolute `filePath`, `fileName`, ISO `capturedAt` time, and provenance `item: CollectedItem`. |
+| `NormalizeSyllabusDocumentOptions`     | Optional `outputDirectory` and direct-document `fileName`.                                                                    |
+| `NormalizedSyllabusDocument`           | Absolute output `filePath`, `fileName`, input `sourcePath`, and optional ZIP `archiveEntry`.                                  |
 
 ===[Configured public sources] | State | Source page | Workflow behavior | | --- | --- | --- | | ACT | [ACT curriculum](https://www.act.gov.au/education-and-training/teaching-and-assessment/what-we-teach-curriculum#High-school-years-7-to-10-) | Open the configured public curriculum page. | | NSW | [NSW Curriculum](https://curriculum.nsw.edu.au/custom) | Search the custom picker; default to English K–10 (2022), select the matching syllabus, and check enabled curriculum boxes. | | NT | [NT curriculum policy](https://education.nt.gov.au/policies/curriculum) | Open the configured public curriculum page. | | QLD | [Queensland P–10 resources](https://www.qcaa.qld.edu.au/p-10/aciq/version-8/p-10-resources-search) | Open the configured resources page. | | SA | [South Australian Birth to Year 10 curriculum](https://www.education.sa.gov.au/students/curriculum-and-learning/curriculum-birth-year-10#schooling-%E2%80%93-reception-to-year-10) | Open the configured public curriculum page. | | TAS | [Tasmanian curriculum](https://www.decyp.tas.gov.au/learning/primary-school-to-year-12/curriculum/) | Open the configured public curriculum page. | | VIC | [Victorian Foundation to 10 resources](https://www.vcaa.vic.edu.au/curriculum/foundation-10/curriculum-area-resources/curriculum-area-resources-0) | Open the configured public curriculum page. | | WA | [WA K–10 curriculum browser](https://k10outline.scsa.wa.edu.au/home/teaching/curriculum-browser) | Open the configured public curriculum page. | ===
 

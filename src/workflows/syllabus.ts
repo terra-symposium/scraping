@@ -11,7 +11,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { access, copyFile, mkdir, writeFile } from 'node:fs/promises';
 import { authenticateWorkflow, resolveWorkflowStorageStatePath } from './browser.js';
-import { safeCanvasUrl } from '../canvas.js';
+import { safeSourceUrl } from '../collection.js';
+import type { CollectedItem } from '../collection.js';
 
 // COMPONENTS
 import AdmZip from 'adm-zip';
@@ -89,6 +90,8 @@ export type FetchedAustralianSyllabus = {
 	fileName: string;
 	/** Time when the download was completed. */
 	capturedAt: string;
+	/** Shared provenance record for this downloaded source. */
+	item: CollectedItem;
 };
 
 /** Options for normalizing a local syllabus document or archive. */
@@ -248,7 +251,24 @@ export async function fetchAustralianSyllabus(options: FetchAustralianSyllabusOp
 		await mkdir(outputDir, { recursive: true, mode: 0o700 });
 		const filePath = path.join(outputDir, fileName);
 		await download.saveAs(filePath);
-		return { state: options.state, sourceUrl: safeCanvasUrl(source.url), filePath, fileName, capturedAt: new Date().toISOString() };
+		const sourceUrl = safeSourceUrl(source.url);
+		return {
+			state: options.state,
+			sourceUrl,
+			filePath,
+			fileName,
+			capturedAt: new Date().toISOString(),
+			item: {
+				sourceId: `${sourceUrl}#${options.state.toLowerCase()}`,
+				title: fileName,
+				section: options.state,
+				safeUrl: sourceUrl,
+				type: 'syllabus',
+				status: 'captured',
+				localPath: filePath,
+				reason: null,
+			},
+		};
 	} finally {
 		await session.close();
 	}

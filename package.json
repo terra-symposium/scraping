@@ -1,6 +1,6 @@
 {
 	"name": "@terra-symposium/scraping",
-	"version": "0.2.0",
+	"version": "0.3.0",
 	"description": "Reusable browser, authentication, parallel-work, Canvas, syllabus, and transcript workflows",
 	"license": "Apache-2.0",
 	"repository": {
@@ -14,7 +14,12 @@
 		"node": ">=20"
 	},
 	"files": [
-		"dist",
+		"dist/*.js",
+		"dist/*.js.map",
+		"dist/*.d.ts",
+		"dist/*.d.ts.map",
+		"dist/cli",
+		"dist/workflows",
 		"src/cli/transcripts.mjs"
 	],
 	"exports": {
@@ -49,7 +54,7 @@
 		"syllabus-fetch": "./dist/cli/syllabus.js"
 	},
 	"scripts": {
-		"prepare": "husky config/husky",
+		"prepare": "pnpm run build && (test ! -d .git || husky config/husky)",
 		"changeset": "changeset",
 		"changeset:status": "changeset status",
 		"version-packages": "changeset version",
