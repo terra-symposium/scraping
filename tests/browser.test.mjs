@@ -129,7 +129,7 @@ test('default authentication loads saved state, saves private state, and closes 
 		},
 		close: async () => contextCloseCount++,
 	};
-	// terra-quality-ignore single-use -- The mock returns one captured browser object whose close count is observed after authentication.
+	// hygiene-ignore single-use -- The mock returns one captured browser object whose close count is observed after authentication.
 	const browser = {
 		newContext: async options => {
 			contextOptions = options;

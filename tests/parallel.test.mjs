@@ -22,7 +22,7 @@ test('queued work stays bounded and sorts worker failures by input index', async
 	let aWorkers = 0;
 	let maxWorkers = 0;
 	const completed = [];
-	// terra-quality-ignore single-use -- Await the queue before asserting its observed concurrency and completion order.
+	// hygiene-ignore single-use -- Await the queue before asserting its observed concurrency and completion order.
 	const failures = await runQueued([0, 1, 2, 3], 2, async (item, index) => {
 		aWorkers++;
 		maxWorkers = Math.max(maxWorkers, aWorkers);
@@ -61,10 +61,10 @@ test('workflow slots release idempotently and honor cancellation', async () => {
 
 test('workflow slots serialize acquisitions across processes', async () => {
 	const root = await mkdtemp(path.join(os.tmpdir(), 'terra-workflow-process-lock-'));
-	// terra-quality-ignore single-use -- Both child workers receive the same lock directory captured before launch.
+	// hygiene-ignore single-use -- Both child workers receive the same lock directory captured before launch.
 	const lockDir = path.join(root, 'locks');
 	const eventPath = path.join(root, 'events.txt');
-	// terra-quality-ignore single-use -- Both child processes execute the same precomputed fixture source.
+	// hygiene-ignore single-use -- Both child processes execute the same precomputed fixture source.
 	const src = `
 		import { appendFile } from 'node:fs/promises';
 		import { setTimeout as delay } from 'node:timers/promises';

@@ -129,7 +129,7 @@ test('syllabus download completes interactive authentication and closes each ses
 			createSession: async ({ headed, storageStatePath: requestedStatePath }) => {
 				headedModes.push(headed);
 				assert.equal(requestedStatePath, storageStatePath);
-				// terra-quality-ignore single-use -- Every session request receives the same mutable page fixture.
+				// hygiene-ignore single-use -- Every session request receives the same mutable page fixture.
 				const page = {
 					currentUrl: 'about:blank',
 					/** Current page address.
@@ -194,7 +194,7 @@ test('syllabus download fails clearly and closes its session when authentication
 				state: 'QLD',
 				storageStatePath: path.join(root, 'state.json'),
 				createSession: async () => {
-					// terra-quality-ignore single-use -- The context retains one mutable page across navigation calls.
+					// hygiene-ignore single-use -- The context retains one mutable page across navigation calls.
 					const page = {
 						currentUrl: 'about:blank',
 						/** Current page address.

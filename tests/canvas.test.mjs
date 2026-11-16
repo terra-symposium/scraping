@@ -232,7 +232,7 @@ test('Canvas export uses the injected session and writes a local manifest and do
 	const root = await mkdtemp(path.join(os.tmpdir(), 'terra-canvas-export-'));
 	const output = path.join(root, 'export');
 	const storageStatePath = path.join(root, 'state.json');
-	// terra-quality-ignore single-use -- The injected session reuses one captured page fixture across requests.
+	// hygiene-ignore single-use -- The injected session reuses one captured page fixture across requests.
 	const fixture = canvasPageFixture({
 		courses: [canvasAnchor({ href: 'https://canvas.example/courses/9', text: 'Course 9', title: 'Course 9' })],
 		modules: [

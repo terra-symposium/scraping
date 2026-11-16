@@ -1,5 +1,5 @@
 {
-	"$schema": "./config/node_modules/@terra-symposium/quality/quality.schema.json",
+	"$schema": "./config/node_modules/@terra-symposium/hygiene/quality.schema.json",
 	"root": ".",
 	"configRoot": "config",
 	"sourceRoots": ["."],
