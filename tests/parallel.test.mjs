@@ -43,7 +43,7 @@ test('queued work stays bounded and sorts worker failures by input index', async
 });
 // Confirms a workflow slot can be cancelled while occupied and released more than once.
 test('workflow slots release idempotently and honor cancellation', async () => {
-	const dir = await mkdtemp(path.join(os.tmpdir(), 'terra-workflow-slot-'));
+	const dir = await mkdtemp(path.join(os.tmpdir(), 'workflow-slot-'));
 	try {
 		const release = await acquireWorkflowSlot({ name: 'parallel-test', size: 1, directory: dir, pollMs: 1 });
 		const controller = new globalThis.AbortController();
@@ -60,7 +60,7 @@ test('workflow slots release idempotently and honor cancellation', async () => {
 });
 
 test('workflow slots serialize acquisitions across processes', async () => {
-	const root = await mkdtemp(path.join(os.tmpdir(), 'terra-workflow-process-lock-'));
+	const root = await mkdtemp(path.join(os.tmpdir(), 'workflow-process-lock-'));
 	// hygiene-ignore single-use -- Both child workers receive the same lock directory captured before launch.
 	const lockDir = path.join(root, 'locks');
 	const eventPath = path.join(root, 'events.txt');

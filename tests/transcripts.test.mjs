@@ -18,7 +18,7 @@ function runTranscriptInventory(args) {
 }
 
 test('transcript inventory reports coverage and removes URL secrets from mapped metadata', async () => {
-	const root = await mkdtemp(path.join(os.tmpdir(), 'terra-transcript-inventory-'));
+	const root = await mkdtemp(path.join(os.tmpdir(), 'transcript-inventory-'));
 	const input = path.join(root, 'sources');
 	const output = path.join(root, 'inventory');
 	const mappingPath = path.join(root, 'mapping.json');
@@ -85,7 +85,7 @@ test('transcript inventory reports coverage and removes URL secrets from mapped 
 });
 
 test('transcript inventory rejects using the input directory as output', async () => {
-	const root = await mkdtemp(path.join(os.tmpdir(), 'terra-transcript-inventory-same-dir-'));
+	const root = await mkdtemp(path.join(os.tmpdir(), 'transcript-inventory-same-dir-'));
 	try {
 		const result = runTranscriptInventory([`--input=${root}`, `--output=${root}`]);
 

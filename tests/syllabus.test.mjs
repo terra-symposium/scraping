@@ -112,7 +112,7 @@ test('syllabus readiness rejects login routes and sign-in pages', async () => {
 });
 
 test('syllabus download completes interactive authentication and closes each session', async () => {
-	const root = await mkdtemp(path.join(os.tmpdir(), 'terra-syllabus-workflow-'));
+	const root = await mkdtemp(path.join(os.tmpdir(), 'syllabus-workflow-'));
 	const storageStatePath = path.join(root, 'state.json');
 	const headedModes = [];
 	const closedModes = [];
@@ -186,7 +186,7 @@ test('syllabus download completes interactive authentication and closes each ses
 });
 
 test('syllabus download fails clearly and closes its session when authentication is missing', async () => {
-	const root = await mkdtemp(path.join(os.tmpdir(), 'terra-syllabus-auth-required-'));
+	const root = await mkdtemp(path.join(os.tmpdir(), 'syllabus-auth-required-'));
 	let closeCount = 0;
 	try {
 		await assert.rejects(

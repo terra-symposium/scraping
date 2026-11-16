@@ -136,7 +136,7 @@ test('Canvas module discovery classifies pages, files, and external links before
 });
 
 test('Canvas group export deduplicates downloads and strips secrets from recorded links', async () => {
-	const root = await mkdtemp(path.join(os.tmpdir(), 'terra-canvas-group-'));
+	const root = await mkdtemp(path.join(os.tmpdir(), 'canvas-group-'));
 	const requestedUrls = [];
 	let disposed = 0;
 	try {
@@ -229,7 +229,7 @@ test('Canvas navigation-only pages are not treated as captured source material',
 });
 
 test('Canvas export uses the injected session and writes a local manifest and download', async () => {
-	const root = await mkdtemp(path.join(os.tmpdir(), 'terra-canvas-export-'));
+	const root = await mkdtemp(path.join(os.tmpdir(), 'canvas-export-'));
 	const output = path.join(root, 'export');
 	const storageStatePath = path.join(root, 'state.json');
 	// hygiene-ignore single-use -- The injected session reuses one captured page fixture across requests.

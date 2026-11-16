@@ -8,7 +8,7 @@ import { chromium } from 'playwright';
 import { authenticateWorkflow } from '../dist/workflows/browser.js';
 
 test('interactive authentication saves state and returns in the requested browser mode', async () => {
-	const root = await mkdtemp(path.join(os.tmpdir(), 'terra-browser-auth-'));
+	const root = await mkdtemp(path.join(os.tmpdir(), 'browser-auth-'));
 	const storageStatePath = path.join(root, 'private', 'storage-state.json');
 	const headedModes = [];
 	const closedModes = [];
@@ -67,7 +67,7 @@ test('interactive authentication saves state and returns in the requested browse
 });
 
 test('non-interactive authentication rejects invalid state and closes its session', async () => {
-	const root = await mkdtemp(path.join(os.tmpdir(), 'terra-browser-auth-required-'));
+	const root = await mkdtemp(path.join(os.tmpdir(), 'browser-auth-required-'));
 	let closed = 0;
 	let storageSaved = false;
 	try {
@@ -90,7 +90,7 @@ test('non-interactive authentication rejects invalid state and closes its sessio
 });
 
 test('authentication closes a created session when opening the workflow fails', async () => {
-	const root = await mkdtemp(path.join(os.tmpdir(), 'terra-browser-auth-open-failure-'));
+	const root = await mkdtemp(path.join(os.tmpdir(), 'browser-auth-open-failure-'));
 	const openingErr = new Error('Could not open the workflow page.');
 	let closed = 0;
 	try {
@@ -113,7 +113,7 @@ test('authentication closes a created session when opening the workflow fails', 
 });
 
 test('default authentication loads saved state, saves private state, and closes Chromium once', async t => {
-	const root = await mkdtemp(path.join(os.tmpdir(), 'terra-browser-default-'));
+	const root = await mkdtemp(path.join(os.tmpdir(), 'browser-default-'));
 	const storageStatePath = path.join(root, 'private', 'state.json');
 	await mkdir(path.dirname(storageStatePath), { recursive: true });
 	await writeFile(storageStatePath, JSON.stringify({ cookies: [], origins: [] }));
