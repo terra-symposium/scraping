@@ -239,7 +239,7 @@ export function canvasCourseUrl(value: string): string | undefined {
  * @param value - Message text that may contain Canvas URLs.
  * @return Message text with each detected URL sanitized.
  */
-function sMessage(value: unknown): string {
+function sMsg(value: unknown): string {
 	return String(value).replace(/https?:\/\/[^\s"'<>]+/g, safeCanvasUrl);
 }
 
@@ -488,8 +488,8 @@ export async function readCanvasPage(page: Page, item: CanvasItem): Promise<{ te
 		.waitForFunction(
 			function (): boolean {
 				for (const selector of ['#content', '#wiki_page_show .show-content', '.show-content', 'main']) {
-					for (const element of document.querySelectorAll(selector)) {
-						if (element.textContent?.trim()) return true;
+					for (const el of document.querySelectorAll(selector)) {
+						if (el.textContent?.trim()) return true;
 					}
 				}
 				return false;
@@ -502,9 +502,9 @@ export async function readCanvasPage(page: Page, item: CanvasItem): Promise<{ te
 	const bodyText = await page.evaluate(function (): string {
 		let largestText = '';
 		for (const selector of ['#content', '#wiki_page_show .show-content', '.show-content', 'main']) {
-			for (const element of document.querySelectorAll<HTMLElement>(selector)) {
-				const text = element.innerText?.trim() || '';
-				if (text && element.getBoundingClientRect().height > 0 && text.length > largestText.length) largestText = text;
+			for (const el of document.querySelectorAll<HTMLElement>(selector)) {
+				const text = el.innerText?.trim() || '';
+				if (text && el.getBoundingClientRect().height > 0 && text.length > largestText.length) largestText = text;
 			}
 		}
 		return largestText;
@@ -577,9 +577,9 @@ export async function scrapeCanvasGroup(options: {
 	for (let index = 0; index < items.length; index++) {
 		const item = items[index];
 		const identity = canvasFileUrl(item.url) || safeCanvasUrl(item.url);
-		const sourceId = canvasSourceKey(identity);
+		const srcId = canvasSourceKey(identity);
 		const entry: CollectedItem = {
-			sourceId,
+			sourceId: srcId,
 			title: item.title,
 			section: group.title,
 			safeUrl: safeCanvasUrl(identity),
@@ -590,12 +590,12 @@ export async function scrapeCanvasGroup(options: {
 			...(item.parentSourceId ? { parentSourceId: item.parentSourceId } : {}),
 		};
 		record.items.push(entry);
-		if (seen.has(sourceId)) {
+		if (seen.has(srcId)) {
 			entry.status = 'duplicate';
 			entry.reason = 'Source already listed in this module.';
 			continue;
 		}
-		seen.add(sourceId);
+		seen.add(srcId);
 		try {
 			if (item.type === 'page') {
 				log(`reading page ${item.title}`);
@@ -612,9 +612,9 @@ export async function scrapeCanvasGroup(options: {
 				entry.localPath = pagePath;
 				entry.status = 'captured';
 				entry.reason = null;
-				items.push(...content.files.map(file => ({ ...file, parentSourceId: sourceId })));
+				items.push(...content.files.map(file => ({ ...file, parentSourceId: srcId })));
 			} else if (item.type === 'file') {
-				const source = canvasFileUrl(item.url);
+				const src = canvasFileUrl(item.url);
 				if (downloaded.has(identity)) {
 					entry.status = 'duplicate';
 					entry.reason = 'File already downloaded in this module.';
@@ -629,12 +629,12 @@ export async function scrapeCanvasGroup(options: {
 					const fileName = canvasResponseFileName(headers['content-disposition']) || item.title;
 					const filePath = path.join(
 						folder,
-						`${sName((source || canvasFileUrl(response.url()))?.split('/').at(-1) || fileName)}-${sanitizeCanvasFileName(inferCanvasFileName(fileName, headers['content-type'] || ''))}`,
+						`${sName((src || canvasFileUrl(response.url()))?.split('/').at(-1) || fileName)}-${sanitizeCanvasFileName(inferCanvasFileName(fileName, headers['content-type'] || ''))}`,
 					);
 					const body = await response.body();
 					if (isCanvasPreviewBody(body, headers['content-type'] || '')) throw new Error('Canvas returned an HTML preview instead of the file download.');
 					await writeFile(filePath, body);
-					record.files.push({ path: filePath, name: fileName, sourceUrl: source ? safeCanvasUrl(source) : undefined });
+					record.files.push({ path: filePath, name: fileName, sourceUrl: src ? safeCanvasUrl(src) : undefined });
 					entry.localPath = filePath;
 					entry.status = 'captured';
 					entry.reason = null;
@@ -650,8 +650,8 @@ export async function scrapeCanvasGroup(options: {
 				entry.reason = null;
 			}
 		} catch (err) {
-			const message = `${item.title}: ${sMessage(err instanceof Error ? err.message : err)}`;
-			entry.reason = sMessage(err instanceof Error ? err.message : err);
+			const message = `${item.title}: ${sMsg(err instanceof Error ? err.message : err)}`;
+			entry.reason = sMsg(err instanceof Error ? err.message : err);
 			record.errors.push(message);
 			log(message, true);
 		}
@@ -732,31 +732,31 @@ export async function isCanvasReady(page: Page): Promise<boolean> {
  * @return Written export directory, manifest data, and sanitized log messages.
  */
 export async function scrapeCanvas(options: CanvasScrapeOptions): Promise<CanvasScrapeResult> {
-	const source = normalizeCanvasUrl(options.canvasUrl);
+	const src = normalizeCanvasUrl(options.canvasUrl);
 	const output = path.resolve(options.output || path.join(os.homedir(), 'Downloads', 'canvas-export'));
 	const headed = options.headed || false;
 	const logs: string[] = [];
 	/**
 	 * Records one sanitized progress or error message for this export.
 	 *
-	 * @param message - Progress or error text before URL sanitization.
+	 * @param msg - Progress or error text before URL sanitization.
 	 * @param failure - Whether this message represents an export failure.
 	 */
-	function log(message: string, failure = false): void {
-		const line = '[canvas-export] ' + sMessage(message);
+	function log(msg: string, failure = false): void {
+		const line = '[canvas-export] ' + sMsg(msg);
 		logs.push(line);
 		// Writes a message through the default export logger.
 		(
 			options.log ||
-			function (message: string, failure = false): void {
-				if (failure) console.error(message);
-				else console.log(message);
+			function (msg: string, failure = false): void {
+				if (failure) console.error(msg);
+				else console.log(msg);
 			}
 		)(line, failure);
 	}
 	let session: Awaited<ReturnType<typeof authenticateWorkflow<Page>>> | undefined;
 	try {
-		log('starting download export from ' + safeCanvasUrl(source));
+		log('starting download export from ' + safeCanvasUrl(src));
 		session = await authenticateWorkflow<Page>({
 			sessionName: 'canvas',
 			storageStatePath: path.resolve(options.storageStatePath || resolveWorkflowStorageStatePath('canvas')),
@@ -766,8 +766,8 @@ export async function scrapeCanvas(options: CanvasScrapeOptions): Promise<Canvas
 			createSession: options.createSession,
 			open: async (context: import('playwright').BrowserContext): Promise<Page> => {
 				const page = await context.newPage();
-				await page.goto(source, { waitUntil: 'domcontentloaded' });
-				const directCourse = canvasCourseUrl(source);
+				await page.goto(src, { waitUntil: 'domcontentloaded' });
+				const directCourse = canvasCourseUrl(src);
 				if (directCourse) await page.goto(directCourse + '/modules', { waitUntil: 'domcontentloaded' });
 				return page;
 			},
@@ -776,16 +776,16 @@ export async function scrapeCanvas(options: CanvasScrapeOptions): Promise<Canvas
 			authenticationRequiredMessage: 'Canvas sign-in is required. Rerun with --headed to sign in through a visible browser.',
 		});
 		const page = session.value;
-		const direct = canvasCourseUrl(source);
+		const direct = canvasCourseUrl(src);
 		const courses = direct
 			? [{ title: 'Course ' + direct.split('/').at(-1), url: direct }]
-			: await discoverCanvasCourses(page, source, {
+			: await discoverCanvasCourses(page, src, {
 					includeAllCourses: options.includeAllCourses,
-					dashboardScope: new URL(source).pathname === '/' || /\/dashboard\/?$/.test(new URL(source).pathname),
+					dashboardScope: new URL(src).pathname === '/' || /\/dashboard\/?$/.test(new URL(src).pathname),
 				});
-		if (!courses.length) throw new Error('No matching Canvas courses were found at ' + safeCanvasUrl(source) + '.');
+		if (!courses.length) throw new Error('No matching Canvas courses were found at ' + safeCanvasUrl(src) + '.');
 		log('discovered ' + courses.length + ' Canvas courses');
-		const manifest: CanvasExportManifest = { source: safeCanvasUrl(source), mode: 'download', courses: [], groups: [] };
+		const manifest: CanvasExportManifest = { source: safeCanvasUrl(src), mode: 'download', courses: [], groups: [] };
 		for (const course of courses) {
 			const groups = await scrapeCanvasCourse({ page, request: session.context.request, course, output, groupMatches: options.groupMatches, log });
 			const groupTitles: string[] = [];
@@ -793,13 +793,13 @@ export async function scrapeCanvas(options: CanvasScrapeOptions): Promise<Canvas
 			manifest.courses.push({ title: course.title, url: safeCanvasUrl(course.url), groups: groupTitles });
 			manifest.groups.push(...groups);
 		}
-		const seenSources = new Set<string>();
+		const seenSrcs = new Set<string>();
 		for (const group of manifest.groups)
 			for (const item of group.items) {
-				if (seenSources.has(item.sourceId)) {
+				if (seenSrcs.has(item.sourceId)) {
 					item.status = 'duplicate';
 					item.reason = 'Source already listed in another module.';
-				} else seenSources.add(item.sourceId);
+				} else seenSrcs.add(item.sourceId);
 			}
 		await mkdir(output, { recursive: true });
 		await writeFile(path.join(output, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
@@ -807,11 +807,11 @@ export async function scrapeCanvas(options: CanvasScrapeOptions): Promise<Canvas
 		await writeFile(path.join(output, 'canvas-export.log'), logs.join('\n') + '\n');
 		return { output, manifest, logs };
 	} catch (err) {
-		const message = sMessage(err instanceof Error ? err.message : err);
-		log(message, true);
+		const msg = sMsg(err instanceof Error ? err.message : err);
+		log(msg, true);
 		await mkdir(output, { recursive: true }).catch(ignoreCanvasWaitFailure);
 		await writeFile(path.join(output, 'canvas-export.log'), logs.join('\n') + '\n').catch(ignoreCanvasWaitFailure);
-		throw new Error(message, { cause: err });
+		throw new Error(msg, { cause: err });
 	} finally {
 		await session?.close();
 	}

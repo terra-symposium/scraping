@@ -3,6 +3,9 @@ title: Canvas export
 description: Capture visible Canvas courses and module content into private local files.
 ---
 
+import { NodesBlock } from '@terra-symposium/docs';
+export const Nodes = props => <NodesBlock block={props} />;
+
 The Canvas workflow discovers courses and module groups visible to a signed-in user, reads Canvas page text, downloads linked Canvas files, and writes a local manifest and log. It does not publish content or read grades, submissions, rosters, or private messages.
 
 ## Collection flow

@@ -82,9 +82,9 @@ export function resolveWorkerCount(fallback = 5, domain?: string, options: Resol
 	let flagIndex = -1;
 	let inlineWorkerValue: string | undefined;
 	for (let index = 0; index < argv.length; index++) {
-		const argument = argv[index];
-		if (flagIndex < 0 && argument === '--workers') flagIndex = index;
-		if (inlineWorkerValue === undefined && argument.startsWith('--workers=')) inlineWorkerValue = argument.slice('--workers='.length);
+		const arg = argv[index];
+		if (flagIndex < 0 && arg === '--workers') flagIndex = index;
+		if (inlineWorkerValue === undefined && arg.startsWith('--workers=')) inlineWorkerValue = arg.slice('--workers='.length);
 	}
 	return (
 		positiveInt(inlineWorkerValue) ||

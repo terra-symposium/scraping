@@ -3,6 +3,9 @@ title: Parallel work
 description: Resolve shared worker limits, run bounded queues, and coordinate concurrent processes.
 ---
 
+import { NodesBlock } from '@terra-symposium/docs';
+export const Nodes = props => <NodesBlock block={props} />;
+
 The package provides helpers for two scopes. `runQueued` limits concurrency inside one Node process. `acquireWorkflowSlot` coordinates a limit across separate processes. `resolveWorkerCount` gives commands and applications the same worker-count precedence.
 
 ## Choose the coordination scope
@@ -97,7 +100,7 @@ Set `directory` to the same resolved path in each process when callers from diff
 
 The default polling interval is 250 milliseconds; set `pollMs` to change it. An `AbortSignal` can cancel a waiting acquisition; the helper throws `signal.reason` when available, or an abort error. Invalid lock files and locks owned by dead processes are removed when encountered. Locks whose owner cannot be inspected because of permission limits are treated as active.
 
-# The lock directory and files are restricted to the owner where the operating system supports those permissions. Release the slot as soon as the constrained operation is done.
+The lock directory and files are restricted to the owner where the operating system supports those permissions. Release the slot as soon as the constrained operation is done.
 
 ## API reference
 
