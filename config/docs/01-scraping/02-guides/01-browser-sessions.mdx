@@ -3,6 +3,9 @@ title: Browser sessions and authentication
 description: Configure headed or headless Chromium, reuse private state, and run application-specific sign-in checks.
 ---
 
+import { NodesBlock } from '@terra-symposium/docs';
+export const Nodes = props => <NodesBlock block={props} />;
+
 The browser helpers centralize Chromium launch, Playwright storage-state reuse, optional visible sign-in, and cleanup. Each workflow supplies its own page setup and readiness check because Canvas, Gemini, Sanity, and public curriculum pages have different requirements.
 
 ## Authentication lifecycle
@@ -117,7 +120,7 @@ Authentication state can contain live credentials or session tokens. Keep it pri
 - macOS: `~/Library/Application Support/Terra Symposium/Workflows/session-name/storage-state.json`
 - Other platforms: `~/.config/terra-symposium/workflows/session-name/storage-state.json`
 
-# Supply an explicit `storageStatePath` when an application manages state elsewhere.
+Supply an explicit `storageStatePath` when an application manages state elsewhere.
 
 ## Custom browser factories
 

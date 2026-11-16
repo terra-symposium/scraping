@@ -3,6 +3,9 @@ title: Workflow APIs
 description: Browser, authentication, parallel-work, and Australian syllabus API contracts.
 ---
 
+import { NodesBlock } from '@terra-symposium/docs';
+export const Nodes = props => <NodesBlock block={props} />;
+
 The APIs on this page are exported from `@terra-symposium/scraping` and `@terra-symposium/scraping/workflows`. Browser, parallel-work, and syllabus functions also have focused subpaths; see the [API index](/01-scraping/03-reference/).
 
 <Nodes
@@ -58,7 +61,7 @@ Failed operations close the active session before rethrowing. Successful callers
 - macOS: `~/Library/Application Support/Terra Symposium/Workflows/<session-name>/storage-state.json`
 - Other platforms: `~/.config/terra-symposium/workflows/<session-name>/storage-state.json`
 
-# The helper creates the state directory with owner-only permissions and restricts the state file to the owner where supported. Storage state contains active login data; keep it private and out of Git.
+The helper creates the state directory with owner-only permissions and restricts the state file to the owner where supported. Storage state contains active login data; keep it private and out of Git.
 
 See the [browser guide](/01-scraping/02-guides/01-browser-sessions/) for lifecycle examples and consumer guidance.
 
@@ -96,7 +99,7 @@ Pass `argv` and `env` through `ResolveWorkerCountOptions` for deterministic look
 
 Set a `directory` that resolves to the same path in each process when callers from different working directories must coordinate. An explicit directory replaces the default name-scoped location. Callers sharing a pool must agree on its size.
 
-# The default polling interval is 250 milliseconds; set `pollMs` to change it. Pass an `AbortSignal` to cancel a waiting acquisition; the helper throws its reason when available. Invalid lock files and locks owned by dead processes are removed when encountered. A lock whose process cannot be inspected because of permission limits is treated as active.
+The default polling interval is 250 milliseconds; set `pollMs` to change it. Pass an `AbortSignal` to cancel a waiting acquisition; the helper throws its reason when available. Invalid lock files and locks owned by dead processes are removed when encountered. A lock whose process cannot be inspected because of permission limits is treated as active.
 
 Always release the slot in `finally`:
 

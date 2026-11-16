@@ -3,6 +3,9 @@ title: Transcript inventory
 description: Inventory local transcript and caption files with week coverage, duplicate detection, and provenance metadata.
 ---
 
+import { NodesBlock } from '@terra-symposium/docs';
+export const Nodes = props => <NodesBlock block={props} />;
+
 The `canvas-transcripts` command organizes local transcript and caption files into weekly text files and a JSON coverage report. It never opens a browser, fetches remote content, modifies Canvas, or changes the input files.
 
 ## Inventory flow
@@ -87,7 +90,7 @@ A mapping key can also be a filename. A unique basename match is accepted; if mu
 
 The report copies only week, meetingTitle, meetingDate, platform, captureMethod, transcriptOrigin, language, visibleVerification, captionStatus, expectedIds, and recordingUrl. Recording URLs are stored without credentials, query parameters, or fragments. Unknown mapping fields are omitted. Mapping filenames and SHA-256 hashes are recorded; the full mapping path is not.
 
-# Provenance is recorded only when platform and either captureMethod or transcriptOrigin are present. Otherwise it is incomplete-or-unknown. This describes supplied metadata completeness; it does not prove accuracy.
+Provenance is recorded only when platform and either captureMethod or transcriptOrigin are present. Otherwise it is incomplete-or-unknown. This describes supplied metadata completeness; it does not prove accuracy.
 
 ## Check expected-meeting coverage
 
@@ -110,7 +113,7 @@ The report copies only week, meetingTitle, meetingDate, platform, captureMethod,
 
 Each meeting needs a non-empty id and a positive integer week. title and required are optional; required defaults to true. matchAny and expectedIds are optional arrays of strings.
 
-# Matching removes punctuation and spaces, lowercases text, then checks for a partial match in the source-relative path, filename, mapped meetingTitle, or mapped expectedIds. The meeting id, matchAny values, and expectedIds are all candidate tokens.
+Matching removes punctuation and spaces, lowercases text, then checks for a partial match in the source-relative path, filename, mapped meetingTitle, or mapped expectedIds. The meeting id, matchAny values, and expectedIds are all candidate tokens.
 
 Expected-meeting matching reports one of these statuses:
 
