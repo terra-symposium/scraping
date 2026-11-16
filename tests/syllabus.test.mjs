@@ -9,37 +9,37 @@ import { AUSTRALIAN_SYLLABUS_SOURCES, fetchAustralianSyllabus, isAustralianSylla
 
 // Verify archive normalization selects the first syllabus document and skips support files.
 test('syllabus archive normalization ignores support documents and selects deterministically', async () => {
-	const temporaryRoot = await mkdtemp(path.join(os.tmpdir(), 'scraping-syllabus-test-'));
+	const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'scraping-syllabus-test-'));
 	try {
-		const archivePath = path.join(temporaryRoot, 'curriculum.zip');
+		const archivePath = path.join(tempRoot, 'curriculum.zip');
 		const archive = new AdmZip();
 		archive.addFile('syllabus support/Support.docx', Buffer.from('support document'));
 		archive.addFile('z-unit.docx', Buffer.from('later document'));
 		archive.addFile('a-unit.docx', Buffer.from('selected document'));
 		archive.writeZip(archivePath);
 
-		const result = await normalizeSyllabusDocument(archivePath, { outputDirectory: path.join(temporaryRoot, 'output') });
+		const result = await normalizeSyllabusDocument(archivePath, { outputDirectory: path.join(tempRoot, 'output') });
 
 		assert.equal(result.fileName, 'a-unit.docx');
 		assert.equal(result.archiveEntry, 'a-unit.docx');
 		assert.equal(await readFile(result.filePath, 'utf8'), 'selected document');
 	} finally {
-		await rm(temporaryRoot, { recursive: true, force: true });
+		await rm(tempRoot, { recursive: true, force: true });
 	}
 });
 
 test('syllabus normalization confines an overridden filename to the selected output directory', async () => {
 	const root = await mkdtemp(path.join(os.tmpdir(), 'scraping-syllabus-name-test-'));
-	const sourcePath = path.join(root, 'source.docx');
+	const srcPath = path.join(root, 'source.docx');
 	const outputDir = path.join(root, 'output');
 	try {
-		await writeFile(sourcePath, 'word document');
-		const result = await normalizeSyllabusDocument(sourcePath, { outputDirectory: outputDir, fileName: '../../Outside Report.docx' });
+		await writeFile(srcPath, 'word document');
+		const result = await normalizeSyllabusDocument(srcPath, { outputDirectory: outputDir, fileName: '../../Outside Report.docx' });
 
 		assert.equal(result.fileName, 'Outside Report.docx');
 		assert.equal(result.filePath, path.join(outputDir, 'Outside Report.docx'));
 		assert.equal(await readFile(result.filePath, 'utf8'), 'word document');
-		assert.equal(await readFile(sourcePath, 'utf8'), 'word document');
+		assert.equal(await readFile(srcPath, 'utf8'), 'word document');
 	} finally {
 		await rm(root, { recursive: true, force: true });
 	}

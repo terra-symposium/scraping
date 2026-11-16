@@ -30,7 +30,7 @@ const args = process.argv.slice(2);
  */
 function option(name: string): string | undefined {
 	const prefix = `--${name}=`;
-	for (const argument of args) if (argument.startsWith(prefix)) return argument.slice(prefix.length);
+	for (const arg of args) if (arg.startsWith(prefix)) return arg.slice(prefix.length);
 	const index = args.indexOf(`--${name}`);
 	return index >= 0 ? args[index + 1] : undefined;
 }

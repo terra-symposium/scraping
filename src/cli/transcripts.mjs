@@ -64,7 +64,7 @@ const entries = [];
 /** Source paths that could not be assigned a trusted week or mapping.
  * @type {Record<string, unknown>[]} - Includes ambiguity and range diagnostics.
  */
-const unmatchedSources = [];
+const unmatchedSrcs = [];
 /** Read failures encountered while processing local transcript files.
  * @type {{source: string, message: string}[]} - Stores source-relative paths and safe messages.
  */
@@ -99,7 +99,7 @@ const manifest = {
 		expected: expectedArg && expectedInput.name ? { file: expectedInput.name, sha256: expectedInput.sha256 } : null,
 	},
 	transcriptFileCount: entries.length,
-	unmatchedSources,
+	unmatchedSources: unmatchedSrcs,
 	readErrors: readErrs,
 	missingExpectedMeetings: [],
 	weeks: report,
@@ -218,7 +218,7 @@ async function readJson(arg, label) {
  * @param {number} r - Second candidate week.
  * @return {number} Negative, zero, or positive according to numeric order.
  */
-function compNumbers(l, r) {
+function compNums(l, r) {
 	return l - r;
 }
 
@@ -229,7 +229,7 @@ function compNumbers(l, r) {
  * @param {TranscriptEntry} r - Second transcript entry.
  * @return {number} Locale comparison result for the source paths.
  */
-function compSourceEntries(l, r) {
+function compSrcEntries(l, r) {
 	return l.source.localeCompare(r.source);
 }
 
@@ -256,9 +256,9 @@ function createExpectedMeetingReport(rawMeeting) {
 	if (foundInExpectedWeek) status = 'found';
 	else if (foundInAnotherWeek) status = 'wrong-week';
 	else if (matched.length) status = 'unassigned-week';
-	const matchedSources = [];
-	for (const entry of matched) matchedSources.push(toMatchedSource(entry));
-	return { id: meeting.id, week, title: meeting.title || meeting.id, required: meeting.required !== false, status, matchedSources };
+	const matchedSrcs = [];
+	for (const entry of matched) matchedSrcs.push(toMatchedSrc(entry));
+	return { id: meeting.id, week, title: meeting.title || meeting.id, required: meeting.required !== false, status, matchedSources: matchedSrcs };
 }
 
 /**
@@ -296,7 +296,7 @@ function entryMatchesMeeting(entry, meeting) {
  * @param {TranscriptEntry} entry - Matched transcript candidate.
  * @return {{source: string, week: number|null, sha256: string}} Compact source provenance.
  */
-function toMatchedSource(entry) {
+function toMatchedSrc(entry) {
 	return { source: entry.source, week: entry.week ?? null, sha256: entry.sha256 };
 }
 
@@ -409,19 +409,19 @@ while (pendingDirs.length) {
 	}
 	const ext = path.extname(entry.name).toLowerCase();
 	if (!['.txt', '.vtt', '.srt'].includes(ext)) continue;
-	const source = path.relative(inputRoot, full).split(path.sep).join('/');
-	const normSource = normLookup(source);
-	const basename = path.posix.basename(normSource);
+	const src = path.relative(inputRoot, full).split(path.sep).join('/');
+	const normSrc = normLookup(src);
+	const basename = path.posix.basename(normSrc);
 	const basenameRecords = mappingByBaseName.get(basename) || [];
-	const mapping = mappingByPath.has(normSource)
-		? { record: mappingByPath.get(normSource), key: normSource, match: 'relative-path' }
+	const mapping = mappingByPath.has(normSrc)
+		? { record: mappingByPath.get(normSrc), key: normSrc, match: 'relative-path' }
 		: basenameRecords.length === 1
 			? { record: basenameRecords[0], key: basename, match: 'unique-basename' }
 			: basenameRecords.length > 1
 				? { record: undefined, key: basename, match: 'ambiguous-basename' }
 				: { record: undefined, key: undefined, match: 'none' };
-	if (mapping.match === 'ambiguous-basename') unmatchedSources.push({ source, reason: 'ambiguous-mapping-basename', mappingKey: mapping.key });
-	if (!mapping.record && ext !== '.vtt' && ext !== '.srt' && !/(transcript|caption|subtitle|lecture|recording|zoom|kaltura|machine[-_ ]transcribed)/i.test(source)) continue;
+	if (mapping.match === 'ambiguous-basename') unmatchedSrcs.push({ source: src, reason: 'ambiguous-mapping-basename', mappingKey: mapping.key });
+	if (!mapping.record && ext !== '.vtt' && ext !== '.srt' && !/(transcript|caption|subtitle|lecture|recording|zoom|kaltura|machine[-_ ]transcribed)/i.test(src)) continue;
 	const candidates = new Set();
 	for (const pattern of [
 		/\bweek[\s._/-]*0*(\d{1,2})(?!\d)/gi,
@@ -429,13 +429,13 @@ while (pendingDirs.length) {
 		/\b(?:lecture|session)[\s._-]*0*(\d{1,2})(?!\d)/gi,
 		/(?:^|[/\\])0*(\d{1,2})[\s._-]*(?:lecture|session|recording|transcript|caption)\b/gi,
 	]) {
-		for (const match of source.matchAll(pattern)) candidates.add(Number(match[1]));
+		for (const match of src.matchAll(pattern)) candidates.add(Number(match[1]));
 	}
-	const inferredWeeks = [...candidates].sort(compNumbers);
+	const inferredWeeks = [...candidates].sort(compNums);
 	const mappedWeek = Number(mapping.record?.week);
 	const week = Number.isInteger(mappedWeek) && mappedWeek > 0 ? mappedWeek : inferredWeeks.length === 1 ? inferredWeeks[0] : undefined;
 	if (week && week > weeks) {
-		unmatchedSources.push({ source, reason: 'week-outside-requested-range', week, inferredWeeks });
+		unmatchedSrcs.push({ source: src, reason: 'week-outside-requested-range', week, inferredWeeks });
 		continue;
 	}
 
@@ -446,8 +446,8 @@ while (pendingDirs.length) {
 	try {
 		bytes = await readFile(full);
 	} catch (err) {
-		readErrs.push({ source, message: err instanceof Error ? err.message : String(err) });
-		unmatchedSources.push({ source, reason: 'read-error' });
+		readErrs.push({ source: src, message: err instanceof Error ? err.message : String(err) });
+		unmatchedSrcs.push({ source: src, reason: 'read-error' });
 		continue;
 	}
 	/** Approved provenance fields copied to a report entry.
@@ -475,7 +475,7 @@ while (pendingDirs.length) {
 		weekMethod: Number.isInteger(mappedWeek) && mappedWeek > 0 ? 'manual-mapping' : inferredWeeks.length === 1 ? 'path-pattern' : 'unresolved',
 		inferredWeeks,
 		name: entry.name,
-		source,
+		source: src,
 		extension: ext,
 		sha256: hash(bytes),
 		bytes: bytes.byteLength,
@@ -484,7 +484,7 @@ while (pendingDirs.length) {
 		provenanceStatus: metadata.platform && (metadata.captureMethod || metadata.transcriptOrigin) ? 'recorded' : 'incomplete-or-unknown',
 		mappingMatch: mapping.match,
 	});
-	if (!week) unmatchedSources.push({ source, reason: inferredWeeks.length > 1 ? 'ambiguous-week-patterns' : 'week-not-determined', inferredWeeks, mappingMatch: mapping.match });
+	if (!week) unmatchedSrcs.push({ source: src, reason: inferredWeeks.length > 1 ? 'ambiguous-week-patterns' : 'week-not-determined', inferredWeeks, mappingMatch: mapping.match });
 }
 const expectedReportEntries = [];
 for (const rawMeeting of expectedMeetings) expectedReportEntries.push(createExpectedMeetingReport(rawMeeting));
@@ -492,7 +492,7 @@ manifest.transcriptFileCount = entries.length;
 for (const expected of expectedReportEntries) {
 	if (expected.required && expected.status !== 'found') manifest.missingExpectedMeetings.push(expected);
 }
-entries.sort(compSourceEntries);
+entries.sort(compSrcEntries);
 for (const entry of entries) {
 	if (!entry.week) continue;
 	grouped.set(entry.week, [...(grouped.get(entry.week) || []), entry]);
@@ -506,8 +506,8 @@ for (let week = 1; week <= weeks; week++) {
 		seen.add(file.sha256);
 		unique.push(file);
 	}
-	const primarySource = new Map();
-	for (const file of unique) primarySource.set(file.sha256, file.source);
+	const primarySrc = new Map();
+	for (const file of unique) primarySrc.set(file.sha256, file.source);
 	const expectedForWeek = [];
 	const missingExpected = [];
 	for (const expected of expectedReportEntries) {
@@ -517,9 +517,9 @@ for (let week = 1; week <= weeks; week++) {
 	}
 	const reportFiles = [];
 	for (const file of files) reportFiles.push(toReportFile(file));
-	const duplicateSources = [];
+	const duplicateSrcs = [];
 	for (const file of files) {
-		if (primarySource.get(file.sha256) !== file.source) duplicateSources.push({ source: file.source, sha256: file.sha256 });
+		if (primarySrc.get(file.sha256) !== file.source) duplicateSrcs.push({ source: file.source, sha256: file.sha256 });
 	}
 	const missingExpectedIds = [];
 	for (const expected of missingExpected) missingExpectedIds.push(expected.id);
@@ -527,8 +527,8 @@ for (let week = 1; week <= weeks; week++) {
 		week,
 		status: unique.length === 0 ? 'missing' : missingExpected.length ? 'partial' : 'found',
 		files: reportFiles,
-		uniqueTranscriptCount: primarySource.size,
-		duplicateSources,
+		uniqueTranscriptCount: primarySrc.size,
+		duplicateSources: duplicateSrcs,
 		expectedMeetings: expectedForWeek,
 		missingExpectedIds,
 	});
@@ -559,7 +559,7 @@ console.log(
 				partialWeeks,
 				missingWeeks,
 				missingExpectedMeetings,
-				unmatchedSources: unmatchedSources.length,
+				unmatchedSources: unmatchedSrcs.length,
 				readErrors: readErrs.length,
 				duplicates,
 			};

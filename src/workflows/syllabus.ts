@@ -127,18 +127,18 @@ export type NormalizedSyllabusDocument = {
  * @return The prepared Playwright page.
  */
 export async function prepareAustralianSyllabusPage(page: Page, state: AustralianSyllabusState, options: PrepareAustralianSyllabusPageOptions = {}): Promise<Page> {
-	const source = AUSTRALIAN_SYLLABUS_SOURCES[state];
-	if (!source) throw new Error(`No curriculum source is configured for ${state}.`);
+	const src = AUSTRALIAN_SYLLABUS_SOURCES[state];
+	if (!src) throw new Error(`No curriculum source is configured for ${state}.`);
 	let current: URL | undefined;
 	try {
 		current = new URL(page.url());
 	} catch {
 		current = undefined;
 	}
-	const target = new URL(source.url);
-	if (!current || current.origin !== target.origin || current.pathname !== target.pathname) await page.goto(source.url, { waitUntil: 'domcontentloaded' });
+	const target = new URL(src.url);
+	if (!current || current.origin !== target.origin || current.pathname !== target.pathname) await page.goto(src.url, { waitUntil: 'domcontentloaded' });
 	if (state !== 'NSW') return page;
-	const syllabusName = options.syllabusName || source.syllabusName || '';
+	const syllabusName = options.syllabusName || src.syllabusName || '';
 	if (!syllabusName) throw new Error('The NSW curriculum workflow requires a syllabus selection.');
 	await page.locator('.custom-view__syllabus-container #search').fill(syllabusName);
 	await page.locator('.custom-view__syllabus-container label').filter({ hasText: syllabusName }).first().click();
@@ -219,8 +219,8 @@ export async function isAustralianSyllabusPageReady(page: Page): Promise<boolean
  * @return Local filename, path, jurisdiction, and safe source URL.
  */
 export async function fetchAustralianSyllabus(options: FetchAustralianSyllabusOptions): Promise<FetchedAustralianSyllabus> {
-	const source = AUSTRALIAN_SYLLABUS_SOURCES[options.state];
-	if (!source) throw new Error(`No curriculum source is configured for ${options.state}.`);
+	const src = AUSTRALIAN_SYLLABUS_SOURCES[options.state];
+	if (!src) throw new Error(`No curriculum source is configured for ${options.state}.`);
 	const timeoutMs = options.timeoutMs || 30_000;
 	const session = await authenticateWorkflow<Page>({
 		sessionName: `syllabus-${options.state.toLowerCase()}`,
@@ -231,7 +231,7 @@ export async function fetchAustralianSyllabus(options: FetchAustralianSyllabusOp
 		createSession: options.createSession,
 		open: async (context: import('playwright').BrowserContext): Promise<Page> => {
 			const page = await context.newPage();
-			await page.goto(source.url, { waitUntil: 'domcontentloaded' });
+			await page.goto(src.url, { waitUntil: 'domcontentloaded' });
 			return page;
 		},
 		isReady: isAustralianSyllabusPageReady,
@@ -251,18 +251,18 @@ export async function fetchAustralianSyllabus(options: FetchAustralianSyllabusOp
 		await mkdir(outputDir, { recursive: true, mode: 0o700 });
 		const filePath = path.join(outputDir, fileName);
 		await download.saveAs(filePath);
-		const sourceUrl = safeSourceUrl(source.url);
+		const srcUrl = safeSourceUrl(src.url);
 		return {
 			state: options.state,
-			sourceUrl,
+			sourceUrl: srcUrl,
 			filePath,
 			fileName,
 			capturedAt: new Date().toISOString(),
 			item: {
-				sourceId: `${sourceUrl}#${options.state.toLowerCase()}`,
+				sourceId: `${srcUrl}#${options.state.toLowerCase()}`,
 				title: fileName,
 				section: options.state,
-				safeUrl: sourceUrl,
+				safeUrl: srcUrl,
 				type: 'syllabus',
 				status: 'captured',
 				localPath: filePath,
@@ -283,21 +283,21 @@ export async function fetchAustralianSyllabus(options: FetchAustralianSyllabusOp
  * @return Absolute path and source information for the resulting Word document.
  */
 export async function normalizeSyllabusDocument(file: string, options: NormalizeSyllabusDocumentOptions = {}): Promise<NormalizedSyllabusDocument> {
-	const sourcePath = path.resolve(file);
-	await access(sourcePath);
-	const baseName = path.basename(options.fileName || sourcePath);
-	const ext = path.extname(baseName) || path.extname(sourcePath);
+	const srcPath = path.resolve(file);
+	await access(srcPath);
+	const baseName = path.basename(options.fileName || srcPath);
+	const ext = path.extname(baseName) || path.extname(srcPath);
 	const outputDir = path.resolve(options.outputDirectory || path.join(os.homedir(), 'Downloads', 'terra-symposium-scraping', 'syllabuses'));
 	await mkdir(outputDir, { recursive: true, mode: 0o700 });
 	if (DOCX_I_REGEX.test(ext)) {
 		const fileName = sFileName(baseName);
 		const filePath = path.join(outputDir, fileName);
-		if (sourcePath !== filePath) await copyFile(sourcePath, filePath);
-		return { filePath, fileName, sourcePath };
+		if (srcPath !== filePath) await copyFile(srcPath, filePath);
+		return { filePath, fileName, sourcePath: srcPath };
 	}
 	if (!/^\.zip$/i.test(ext)) throw new Error(`Unsupported syllabus file type: ${ext || '(no extension)'}.`);
 	const wordEntries = [];
-	for (const entry of new AdmZip(sourcePath).getEntries()) {
+	for (const entry of new AdmZip(srcPath).getEntries()) {
 		if (!entry.isDirectory && DOCX_I_REGEX.test(path.extname(entry.entryName)) && !/syllabus\s*support/i.test(entry.entryName)) wordEntries.push(entry);
 	}
 	wordEntries.sort(compArchiveEntryNames);
@@ -308,5 +308,5 @@ export async function normalizeSyllabusDocument(file: string, options: Normalize
 	const fileName = sFileName(path.basename(entry.entryName));
 	const filePath = path.join(archiveDir, fileName);
 	await writeFile(filePath, entry.getData());
-	return { filePath, fileName, sourcePath, archiveEntry: entry.entryName };
+	return { filePath, fileName, sourcePath: srcPath, archiveEntry: entry.entryName };
 }
