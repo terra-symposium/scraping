@@ -23,7 +23,7 @@
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
-		"@terra-symposium/docs": "^0.4.14",
+		"@terra-symposium/docs": "^0.4.16",
 		"@terra-symposium/quality": "^2.4.0",
 		"eslint": "^10.13.0",
 		"globals": "^17.13.0",
