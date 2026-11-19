@@ -3,8 +3,6 @@ title: Australian syllabus acquisition
 description: Open configured Australian curriculum pages, download Word syllabuses, and normalize local documents.
 ---
 
-import { NodesBlock } from '@terra-symposium/docs';
-export const Nodes = props => <NodesBlock block={props} />;
 
 The syllabus workflow downloads a Word file from one configured Australian state or territory curriculum page. It opens the public page, prepares its download controls, and saves the result locally. It does not convert the document or create notes.
 
@@ -14,23 +12,23 @@ The syllabus workflow downloads a Word file from one configured Australian state
 	direction='TB'
 	height={500}
 	nodes={`[
-    {"id":"state","type":"origin","data":{"title":"Choose a state or territory"}},
-    {"id":"nsw","type":"decision","data":{"title":"Is the state NSW?"}},
-    {"id":"picker","type":"process","data":{"title":"Select syllabus in NSW custom picker"}},
-    {"id":"source","type":"process","data":{"title":"Open configured curriculum page"}},
-    {"id":"download","type":"process","data":{"title":"Download the visible Word file"}},
-    {"id":"local","type":"data","data":{"title":"Save locally; normalize if needed"}},
-    {"id":"consumer","type":"terminal","data":{"title":"Consumer reviews and transforms"}}
-  ]`}
+		{"id":"state","type":"origin","data":{"title":"Choose a state or territory"}},
+		{"id":"nsw","type":"decision","data":{"title":"Is the state NSW?"}},
+		{"id":"picker","type":"process","data":{"title":"Select syllabus in NSW custom picker"}},
+		{"id":"source","type":"process","data":{"title":"Open configured curriculum page"}},
+		{"id":"download","type":"process","data":{"title":"Download the visible Word file"}},
+		{"id":"local","type":"data","data":{"title":"Save locally; normalize if needed"}},
+		{"id":"consumer","type":"terminal","data":{"title":"Consumer reviews and transforms"}},
+	]`}
 	edges={`[
-    {"id":"state-nsw","source":"state","target":"nsw"},
-    {"id":"nsw-picker","source":"nsw","target":"picker","data":{"label":"Yes"}},
-    {"id":"nsw-source","source":"nsw","target":"source","data":{"label":"No"}},
-    {"id":"picker-source","source":"picker","target":"source"},
-    {"id":"source-download","source":"source","target":"download"},
-    {"id":"download-local","source":"download","target":"local"},
-    {"id":"local-consumer","source":"local","target":"consumer"}
-  ]`}
+		{"id":"state-nsw","source":"state","target":"nsw"},
+		{"id":"nsw-picker","source":"nsw","target":"picker","data":{"label":"Yes"}},
+		{"id":"nsw-source","source":"nsw","target":"source","data":{"label":"No"}},
+		{"id":"picker-source","source":"picker","target":"source"},
+		{"id":"source-download","source":"source","target":"download"},
+		{"id":"download-local","source":"download","target":"local"},
+		{"id":"local-consumer","source":"local","target":"consumer"},
+	]`}
 />
 
 ## Supported curriculum pages
@@ -60,7 +58,9 @@ The default output directory is `~/Downloads/terra-symposium-scraping/syllabuses
 pnpm exec syllabus-fetch --state=NSW --headed --output=/path/to/syllabuses
 ```
 
-The CLI supports `--state`, `--output`, `--file-name`, `--syllabus-name`, `--headed`, `--interactive`, `--storage-state`, and `--timeout`. Run `syllabus-fetch --help` for exact flags and defaults. The command prints the `FetchedAustralianSyllabus` result as JSON. |||
+The CLI supports `--state`, `--output`, `--file-name`, `--syllabus-name`, `--headed`, `--interactive`, `--storage-state`, and `--timeout`. Run `syllabus-fetch --help` for exact flags and defaults. The command prints the `FetchedAustralianSyllabus` result as JSON.
+
+|||
 
 |||[TypeScript API]
 
@@ -76,7 +76,9 @@ const syllabus = await fetchAustralianSyllabus({
 console.log(syllabus.filePath);
 ```
 
-The result includes the state code, sanitized source URL, absolute file path, saved basename, ISO `capturedAt` timestamp, and a `CollectedItem` for provenance. |||
+The result includes the state code, sanitized source URL, absolute file path, saved basename, ISO `capturedAt` timestamp, and a `CollectedItem` for provenance.
+
+|||
 
 The fetch workflow is headless and non-interactive by default. Setting `headed: true` requests a visible browser and allows sign-in unless `interactive` is explicitly false. Set `interactive: true` with headed omitted or false to start headlessly and open a browser only if the page is not ready. Each jurisdiction uses a separate state-file name outside the repository.
 
@@ -101,8 +103,11 @@ const normalized = await normalizeSyllabusDocument('/path/to/download.zip', {
 
 The default output directory is the same Downloads folder used by the fetch workflow. The result includes the absolute `filePath`, `fileName`, and original absolute `sourcePath`. ZIP results also include the selected `archiveEntry` path. A ZIP without a matching Word document throws. The helper does not unpack the rest of the archive, convert Word formats, or change the source file.
 
-===[ZIP selection rule] For ZIP input, the helper chooses the first alphabetically sorted `.doc` or `.docx` entry whose path does not contain “syllabus support”. Only that document is extracted. ===
+===[ZIP selection rule]
 
+For ZIP input, the helper chooses the first alphabetically sorted `.doc` or `.docx` entry whose path does not contain “syllabus support”. Only that document is extracted.
+
+===
 `prepareAustralianSyllabusPage(page, state, options)` navigates the given Playwright page when it is not already on the configured source page. For NSW, it selects `options.syllabusName` or the configured default and prepares the curriculum checkboxes. Other jurisdictions currently keep the configured page as-is.
 
 `isAustralianSyllabusPageReady(page)` rejects login, SAML, and sign-in routes and checks for readable body text. It indicates a public page is readable; it is not a credential check.

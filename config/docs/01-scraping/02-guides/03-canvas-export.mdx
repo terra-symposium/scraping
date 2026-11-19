@@ -3,8 +3,6 @@ title: Canvas export
 description: Capture visible Canvas courses and module content into private local files.
 ---
 
-import { NodesBlock } from '@terra-symposium/docs';
-export const Nodes = props => <NodesBlock block={props} />;
 
 The Canvas workflow discovers courses and module groups visible to a signed-in user, reads Canvas page text, downloads linked Canvas files, and writes a local manifest and log. It does not publish content or read grades, submissions, rosters, or private messages.
 
@@ -14,25 +12,25 @@ The Canvas workflow discovers courses and module groups visible to a signed-in u
 	direction='TB'
 	height={560}
 	nodes={`[
-    {"id":"url","type":"origin","data":{"title":"Start with a Canvas URL"}},
-    {"id":"course","type":"decision","data":{"title":"Is it a course URL?"}},
-    {"id":"direct","type":"process","data":{"title":"Export that course"}},
-    {"id":"list","type":"process","data":{"title":"Discover visible courses"}},
-    {"id":"filter","type":"process","data":{"title":"Apply title filter or --all-courses"}},
-    {"id":"modules","type":"process","data":{"title":"Select matching module groups"}},
-    {"id":"resources","type":"process","data":{"title":"Read pages; download Canvas files"}},
-    {"id":"output","type":"terminal","data":{"title":"Write local files, manifest, and log"}}
-  ]`}
+		{"id":"url","type":"origin","data":{"title":"Start with a Canvas URL"}},
+		{"id":"course","type":"decision","data":{"title":"Is it a course URL?"}},
+		{"id":"direct","type":"process","data":{"title":"Export that course"}},
+		{"id":"list","type":"process","data":{"title":"Discover visible courses"}},
+		{"id":"filter","type":"process","data":{"title":"Apply title filter or --all-courses"}},
+		{"id":"modules","type":"process","data":{"title":"Select matching module groups"}},
+		{"id":"resources","type":"process","data":{"title":"Read pages; download Canvas files"}},
+		{"id":"output","type":"terminal","data":{"title":"Write local files, manifest, and log"}},
+	]`}
 	edges={`[
-    {"id":"url-course","source":"url","target":"course"},
-    {"id":"course-direct","source":"course","target":"direct","data":{"label":"Yes"}},
-    {"id":"course-list","source":"course","target":"list","data":{"label":"No"}},
-    {"id":"list-filter","source":"list","target":"filter"},
-    {"id":"direct-modules","source":"direct","target":"modules"},
-    {"id":"filter-modules","source":"filter","target":"modules"},
-    {"id":"modules-resources","source":"modules","target":"resources"},
-    {"id":"resources-output","source":"resources","target":"output"}
-  ]`}
+		{"id":"url-course","source":"url","target":"course"},
+		{"id":"course-direct","source":"course","target":"direct","data":{"label":"Yes"}},
+		{"id":"course-list","source":"course","target":"list","data":{"label":"No"}},
+		{"id":"list-filter","source":"list","target":"filter"},
+		{"id":"direct-modules","source":"direct","target":"modules"},
+		{"id":"filter-modules","source":"filter","target":"modules"},
+		{"id":"modules-resources","source":"modules","target":"resources"},
+		{"id":"resources-output","source":"resources","target":"output"},
+	]`}
 />
 
 ## Install and start a run
@@ -46,13 +44,18 @@ pnpm exec playwright install chromium
 
 |||[Command line]
 
+
 ```sh
 pnpm exec canvas-export --canvas-url=https://canvas.example.edu/dashboard --headed --groups="Week 1,Week 2"
 ```
 
-The default output is `~/Downloads/canvas-export`. Use `--output=PATH` to change it. `--groups` accepts comma-separated, case-insensitive title fragments; any fragment may match. Use `--all-courses` to include every visible course. The [Canvas CLI reference](/01-scraping/03-reference/03-command-line/#canvas-export) lists every option. |||
+The default output is `~/Downloads/canvas-export`. Use `--output=PATH` to change it. `--groups` accepts comma-separated, case-insensitive title fragments; any fragment may match. Use `--all-courses` to include every visible course. The [Canvas CLI reference](/01-scraping/03-reference/03-command-line/#canvas-export) lists every option.
 
-|||[TypeScript API] Use `scrapeCanvas` for the complete workflow when the package should own authentication, file paths, manifests, logging, and browser cleanup:
+|||
+
+|||[TypeScript API]
+
+Use `scrapeCanvas` for the complete workflow when the package should own authentication, file paths, manifests, logging, and browser cleanup:
 
 ```ts
 import { scrapeCanvas } from '@terra-symposium/scraping/canvas';
@@ -67,7 +70,9 @@ const result = await scrapeCanvas({
 console.log(result.output, result.manifest);
 ```
 
-The [Canvas API reference](/01-scraping/03-reference/01-canvas/) documents all options and return fields. |||
+The [Canvas API reference](/01-scraping/03-reference/01-canvas/) documents all options and return fields.
+
+|||
 
 ## Course and module selection
 
@@ -146,6 +151,7 @@ The manifest records the sanitized source URL, selected course and group summari
 A failed resource is recorded and logged; later items continue. Top-level failures such as an invalid URL, failed authentication, or no matching courses throw an error. The package writes the sanitized log even after a top-level failure and always closes a browser session it owns. The complete behavior is described in the [Canvas API reference](/01-scraping/03-reference/01-canvas/#complete-export-behavior).
 
 :::note[Review course access]
+
 
 Canvas collection reads courses and module resources visible to the signed-in account. Review course rules before including material. Keep exports private and outside Git, and verify downloaded files before using them.
 

@@ -62,7 +62,7 @@ pnpm run canvas:transcripts -- \
   --expected=/path/to/expected-meetings.json
 ```
 
-`--mapping` and `--expected` are optional. The script reads only local files, accepts `.txt`, `.vtt`, and `.srt`, and writes `Week-01.txt` through the requested week count plus `transcripts-manifest.json`. WebVTT and SRT files are candidates by extension. A plain `.txt` file must have a transcript-related name or an explicit source mapping to be inventoried. The helper does not access Canvas, Zoom, or other network services and does not write to Terra Docs.
+`--mapping` and `--expected` are optional. The script reads only local files, accepts `.txt`, `.vtt`, and `.srt`, and writes `Week-01.txt` through the requested week count plus `transcripts-manifest.json`. WebVTT and SRT files are candidates by extension. A plain `.txt` file must have a transcript-related name or an explicit source mapping to be inventoried. The helper does not access Canvas, Zoom, or other network services and does not write to Docs.
 
 The output includes source paths, SHA-256 hashes, byte sizes, assigned week and evidence method, safe mapped metadata, duplicate sources, unresolved week candidates, read errors, per-week status, and expected-meeting gaps. Exact duplicate content is detected by SHA-256 within each week; review the source list because deduplication does not establish semantic equivalence. Mapping and expected-input file names and hashes are recorded for reproducibility.
 

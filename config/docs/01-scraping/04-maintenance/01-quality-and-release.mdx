@@ -7,8 +7,9 @@ The package and its Docs and quality tooling use separate dependency directories
 
 ## Repository tasks
 
-|||[Build and run quality] From the repository root, install package dependencies and build the TypeScript package:
+|||[Build and run quality]
 
+From the repository root, install package dependencies and build the TypeScript package:
 ```sh
 pnpm install
 pnpm run build
@@ -28,10 +29,13 @@ pnpm run quality
 
 Quality runs the configured static checks. Run `pnpm run test` for the package build and test suite, and `pnpm --dir config run build` for the Docs site. `pnpm run verify` runs full-scope Quality and the package tests.
 
-To build only one artifact, use `pnpm run build` for the TypeScript package or `pnpm --dir config run build` for the Docs site at `config/dist/docs`. |||
+To build only one artifact, use `pnpm run build` for the TypeScript package or `pnpm --dir config run build` for the Docs site at `config/dist/docs`.
 
-|||[Build and serve Docs] Build and serve the static Docs output from the repository root:
+|||
 
+|||[Build and serve Docs]
+
+Build and serve the static Docs output from the repository root:
 ```sh
 pnpm --dir config run build
 pnpm --dir config run preview
@@ -48,7 +52,9 @@ pnpm --dir config exec astro preview stop
 
 For live source editing, run `pnpm --dir config run docs`. With the currently installed `@terra-symposium/docs` 0.4.3, the dev server logs “Failed to create the dev server app: module is not defined” and HTTP requests hang even though it reports that it started. Use the static preview while that dev-server error is present. Check or stop its process with `pnpm --dir config exec astro dev status` or `pnpm --dir config exec astro dev stop`.
 
-::: |||
+:::
+
+|||
 
 |||[Release a package tag]
 
@@ -58,4 +64,6 @@ For live source editing, run `pnpm --dir config run docs`. With the currently in
 4. Push the branch and tag to `Terra-Symposium/scraping`.
 5. Update consuming Git dependency pins and lockfiles after checking which repositories need the release.
 
-Consumers install the package from Git. No npm publish or repository CI workflow is configured. Keep the Git tag and package version aligned so each consumer lockfile resolves the intended commit. No hosted Docs deployment is configured. |||
+Consumers install the package from Git. No npm publish or repository CI workflow is configured. Keep the Git tag and package version aligned so each consumer lockfile resolves the intended commit. No hosted Docs deployment is configured.
+
+|||

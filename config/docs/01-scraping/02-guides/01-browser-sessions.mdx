@@ -3,8 +3,6 @@ title: Browser sessions and authentication
 description: Configure headed or headless Chromium, reuse private state, and run application-specific sign-in checks.
 ---
 
-import { NodesBlock } from '@terra-symposium/docs';
-export const Nodes = props => <NodesBlock block={props} />;
 
 The browser helpers centralize Chromium launch, Playwright storage-state reuse, optional visible sign-in, and cleanup. Each workflow supplies its own page setup and readiness check because Canvas, Gemini, Sanity, and public curriculum pages have different requirements.
 
@@ -16,34 +14,43 @@ The browser helpers centralize Chromium launch, Playwright storage-state reuse, 
 	direction='TB'
 	height={600}
 	nodes={`[
-    {"id":"open","type":"origin","data":{"title":"Open requested browser mode"}},
-    {"id":"ready","type":"decision","data":{"title":"Does isReady pass?"}},
-    {"id":"return","type":"terminal","data":{"title":"Save state and return session"}},
-    {"id":"interactive","type":"decision","data":{"title":"Is interactive enabled?"}},
-    {"id":"throw","type":"terminal","data":{"title":"Close session and throw"}},
-    {"id":"signin","type":"process","data":{"title":"Open visible browser; finish sign-in"}},
-    {"id":"headed","type":"decision","data":{"title":"Was headed requested?"}},
-    {"id":"visible","type":"terminal","data":{"title":"Keep and return visible session"}},
-    {"id":"verify","type":"terminal","data":{"title":"Reopen headless; verify or throw"}}
-  ]`}
+		{"id":"open","type":"origin","data":{"title":"Open requested browser mode"}},
+		{"id":"ready","type":"decision","data":{"title":"Does isReady pass?"}},
+		{"id":"return","type":"terminal","data":{"title":"Save state and return session"}},
+		{"id":"interactive","type":"decision","data":{"title":"Is interactive enabled?"}},
+		{"id":"throw","type":"terminal","data":{"title":"Close session and throw"}},
+		{"id":"signin","type":"process","data":{"title":"Open visible browser; finish sign-in"}},
+		{"id":"headed","type":"decision","data":{"title":"Was headed requested?"}},
+		{"id":"visible","type":"terminal","data":{"title":"Keep and return visible session"}},
+		{"id":"verify","type":"terminal","data":{"title":"Reopen headless; verify or throw"}},
+	]`}
 	edges={`[
-    {"id":"open-ready","source":"open","target":"ready"},
-    {"id":"ready-return","source":"ready","target":"return","data":{"label":"Yes"}},
-    {"id":"ready-interactive","source":"ready","target":"interactive","data":{"label":"No"}},
-    {"id":"interactive-throw","source":"interactive","target":"throw","data":{"label":"No"}},
-    {"id":"interactive-signin","source":"interactive","target":"signin","data":{"label":"Yes"}},
-    {"id":"signin-headed","source":"signin","target":"headed"},
-    {"id":"headed-visible","source":"headed","target":"visible","data":{"label":"Yes"}},
-    {"id":"headed-verify","source":"headed","target":"verify","data":{"label":"No"}}
-  ]`}
+		{"id":"open-ready","source":"open","target":"ready"},
+		{"id":"ready-return","source":"ready","target":"return","data":{"label":"Yes"}},
+		{"id":"ready-interactive","source":"ready","target":"interactive","data":{"label":"No"}},
+		{"id":"interactive-throw","source":"interactive","target":"throw","data":{"label":"No"}},
+		{"id":"interactive-signin","source":"interactive","target":"signin","data":{"label":"Yes"}},
+		{"id":"signin-headed","source":"signin","target":"headed"},
+		{"id":"headed-visible","source":"headed","target":"visible","data":{"label":"Yes"}},
+		{"id":"headed-verify","source":"headed","target":"verify","data":{"label":"No"}},
+	]`}
 />
 
-|||[Headless automation] Set `headed: false` and leave `interactive` false (the default) to reuse saved state without opening a window. If the app is not ready, the helper closes the session and throws. |||
+|||[Headless automation]
 
-|||[Headless with sign-in recovery] Set `headed: false` and `interactive: true`. The helper tries headlessly first. If readiness fails, it opens a visible browser for sign-in, saves state, closes that browser, then launches and verifies a fresh headless session. |||
+Set `headed: false` and leave `interactive` false (the default) to reuse saved state without opening a window. If the app is not ready, the helper closes the session and throws.
 
-|||[Visible session] Set `headed: true`. `interactive` defaults to true, so a visible session can wait for sign-in and remains open when returned. Set `interactive: false` to require existing state; an unreadable session then closes and throws. |||
+|||
+|||[Headless with sign-in recovery]
 
+Set `headed: false` and `interactive: true`. The helper tries headlessly first. If readiness fails, it opens a visible browser for sign-in, saves state, closes that browser, then launches and verifies a fresh headless session.
+
+|||
+|||[Visible session]
+
+Set `headed: true`. `interactive` defaults to true, so a visible session can wait for sign-in and remains open when returned. Set `interactive: false` to require existing state; an unreadable session then closes and throws.
+
+|||
 The default interactive-authentication timeout is 15 minutes. Readiness is polled at intervals of up to one second. `onInteractiveStart` runs just before the user must finish sign-in.
 
 ## Create a temporary browser session
@@ -115,8 +122,9 @@ If `userDataDir` is set, the helper launches a persistent browser context. `clos
 
 Authentication state can contain live credentials or session tokens. Keep it private and out of Git, shared backups, and exported course data. Use a separate `sessionName` for each service or account. The helper creates the state directory and restricts the directory and saved file to the owner where supported.
 
-===[Default storage-state paths] When `storageStatePath` is omitted, the helper sanitizes `sessionName` and uses an OS-level path outside the repository:
+===[Default storage-state paths]
 
+When `storageStatePath` is omitted, the helper sanitizes `sessionName` and uses an OS-level path outside the repository:
 - macOS: `~/Library/Application Support/Terra Symposium/Workflows/session-name/storage-state.json`
 - Other platforms: `~/.config/terra-symposium/workflows/session-name/storage-state.json`
 

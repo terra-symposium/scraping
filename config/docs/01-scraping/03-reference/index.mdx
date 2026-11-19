@@ -20,16 +20,18 @@ These are the supported package exports. Do not import files from `src/` or `dis
 | `@terra-symposium/scraping/workflows/parallel` | Worker-count resolution, bounded queues, and process slots.                      |
 | `@terra-symposium/scraping/workflows/syllabus` | Australian curriculum sources, Word downloads, and local document normalization. |
 
-|||[Root package import] The root import is the shortest option when the application uses several workflow areas:
+|||[Root package import]
 
+The root import is the shortest option when the application uses several workflow areas:
 ```ts
 import { authenticateWorkflow, resolveWorkerCount, runQueued } from '@terra-symposium/scraping';
 ```
 
 |||
 
-|||[Focused imports] Use a focused subpath when the module boundary should be explicit:
+|||[Focused imports]
 
+Use a focused subpath when the module boundary should be explicit:
 ```ts
 import { scrapeCanvas } from '@terra-symposium/scraping/canvas';
 import type { CanvasScrapeOptions } from '@terra-symposium/scraping/canvas';
@@ -54,4 +56,4 @@ The task-focused [Canvas guide](/01-scraping/02-guides/03-canvas-export/) explai
 
 The package owns browser-session mechanics, readiness-callback orchestration, bounded queues, Canvas collection helpers, configured Australian syllabus fetchers, and the offline transcript inventory command.
 
-Consumers own service-specific account selection, selectors outside the shared Canvas and syllabus adapters, AI generation, note formatting, review, and publishing. The package writes source material to local paths; it does not publish to Terra Docs or Sanity and does not edit Uni Notes content.
+Consumers own service-specific account selection, selectors outside the shared Canvas and syllabus adapters, AI generation, note formatting, review, and publishing. The package writes source material to local paths; it does not publish to Docs or Sanity and does not edit Uni Notes content.

@@ -12,8 +12,8 @@ importers:
         specifier: ^10.0.1
         version: 10.0.1(eslint@10.14.0(jiti@1.21.7))
       '@terra-symposium/docs':
-        specifier: ^0.4.24
-        version: 0.4.24(@astrojs/markdown-satteri@0.4.7)(@types/node@26.6.6)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(jiti@1.21.7)(xstate@5.33.4)
+        specifier: ^0.4.29
+        version: 0.4.29(@astrojs/markdown-satteri@0.4.7)(@types/node@26.6.6)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(jiti@1.21.7)(xstate@5.33.4)
       '@terra-symposium/hygiene':
         specifier: ^2.4.5
         version: 2.4.5(eslint@10.14.0(jiti@1.21.7))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -1759,8 +1759,8 @@ packages:
       react: '>=18'
       react-dom: '>=18'
 
-  '@terra-symposium/docs@0.4.24':
-    resolution: {integrity: sha512-8hQd5ip45ggY6oqbFT7VN68jH6a/b1VlMPMv/tSGMrIm/9Z1Hgy+MpLuU2NfVjEQnKG2B10ct+pLAbCMdO5C2g==}
+  '@terra-symposium/docs@0.4.29':
+    resolution: {integrity: sha512-DMzKytUkvlZMdTgXHMtt09XVuuqbNsNKHSI2U91u3luFgnxshGB59lmijgf/wdzwk0GLble412ZpZlm+aOaa0g==}
     engines: {node: '>=24.12.0'}
     hasBin: true
 
@@ -6350,7 +6350,7 @@ snapshots:
       react: 19.3.1
       react-dom: 19.3.1(react@19.3.1)
 
-  '@terra-symposium/docs@0.4.24(@astrojs/markdown-satteri@0.4.7)(@types/node@26.6.6)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(jiti@1.21.7)(xstate@5.33.4)':
+  '@terra-symposium/docs@0.4.29(@astrojs/markdown-satteri@0.4.7)(@types/node@26.6.6)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(jiti@1.21.7)(xstate@5.33.4)':
     dependencies:
       '@astrojs/markdown-remark': 7.3.5
       '@astrojs/mdx': 8.1.2(@astrojs/markdown-remark@7.3.5)(@astrojs/markdown-satteri@0.4.7)(astro@7.4.8(@astrojs/markdown-remark@7.3.5)(@types/node@26.6.6)(jiti@1.21.7)(yaml@2.9.1))

@@ -3,8 +3,6 @@ title: Transcript inventory
 description: Inventory local transcript and caption files with week coverage, duplicate detection, and provenance metadata.
 ---
 
-import { NodesBlock } from '@terra-symposium/docs';
-export const Nodes = props => <NodesBlock block={props} />;
 
 The `canvas-transcripts` command organizes local transcript and caption files into weekly text files and a JSON coverage report. It never opens a browser, fetches remote content, modifies Canvas, or changes the input files.
 
@@ -14,23 +12,23 @@ The `canvas-transcripts` command organizes local transcript and caption files in
 	direction='TB'
 	height={500}
 	nodes={`[
-    {"id":"input","type":"origin","data":{"title":"Local transcript source tree"}},
-    {"id":"filter","type":"process","data":{"title":"Select supported transcript files"}},
-    {"id":"mapping","type":"decision","data":{"title":"Does mapping assign a week?"}},
-    {"id":"manual","type":"process","data":{"title":"Use manual week and metadata"}},
-    {"id":"infer","type":"process","data":{"title":"Infer week from path or filename"}},
-    {"id":"coverage","type":"process","data":{"title":"Check expected meetings if supplied"}},
-    {"id":"output","type":"terminal","data":{"title":"Write weekly text and manifest"}}
-  ]`}
+		{"id":"input","type":"origin","data":{"title":"Local transcript source tree"}},
+		{"id":"filter","type":"process","data":{"title":"Select supported transcript files"}},
+		{"id":"mapping","type":"decision","data":{"title":"Does mapping assign a week?"}},
+		{"id":"manual","type":"process","data":{"title":"Use manual week and metadata"}},
+		{"id":"infer","type":"process","data":{"title":"Infer week from path or filename"}},
+		{"id":"coverage","type":"process","data":{"title":"Check expected meetings if supplied"}},
+		{"id":"output","type":"terminal","data":{"title":"Write weekly text and manifest"}},
+	]`}
 	edges={`[
-    {"id":"input-filter","source":"input","target":"filter"},
-    {"id":"filter-mapping","source":"filter","target":"mapping"},
-    {"id":"mapping-manual","source":"mapping","target":"manual","data":{"label":"Yes"}},
-    {"id":"mapping-infer","source":"mapping","target":"infer","data":{"label":"No"}},
-    {"id":"manual-coverage","source":"manual","target":"coverage"},
-    {"id":"infer-coverage","source":"infer","target":"coverage"},
-    {"id":"coverage-output","source":"coverage","target":"output"}
-  ]`}
+		{"id":"input-filter","source":"input","target":"filter"},
+		{"id":"filter-mapping","source":"filter","target":"mapping"},
+		{"id":"mapping-manual","source":"mapping","target":"manual","data":{"label":"Yes"}},
+		{"id":"mapping-infer","source":"mapping","target":"infer","data":{"label":"No"}},
+		{"id":"manual-coverage","source":"manual","target":"coverage"},
+		{"id":"infer-coverage","source":"infer","target":"coverage"},
+		{"id":"coverage-output","source":"coverage","target":"output"},
+	]`}
 />
 
 ## Run the inventory
@@ -64,8 +62,9 @@ The manifest records the inference method (manual-mapping, path-pattern, or unre
 
 ## Add optional metadata
 
-===[Source mapping file] The mapping file can contain a top-level `sources` object or the path-keyed object directly. Prefer paths relative to the input directory so files with duplicate basenames remain distinguishable:
+===[Source mapping file]
 
+The mapping file can contain a top-level `sources` object or the path-keyed object directly. Prefer paths relative to the input directory so files with duplicate basenames remain distinguishable:
 ```json
 {
 	"sources": {
@@ -94,8 +93,9 @@ Provenance is recorded only when platform and either captureMethod or transcript
 
 ## Check expected-meeting coverage
 
-===[Expected-meetings file] Use this optional file to report whether each known meeting has a matching transcript source:
+===[Expected-meetings file]
 
+Use this optional file to report whether each known meeting has a matching transcript source:
 ```json
 {
 	"meetings": [
