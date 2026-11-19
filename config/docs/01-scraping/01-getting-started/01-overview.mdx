@@ -14,21 +14,21 @@ The package saves source material to local files. Website and Uni Notes own the 
 	direction='TB'
 	height={480}
 	nodes={`[
-		{"id":"consumer","type":"origin","data":{"title":"Website or Uni Notes"}},
-		{"id":"package","type":"process","data":{"title":"Shared scraping package"}},
-		{"id":"browser","type":"process","data":{"title":"Canvas and syllabus"}},
-		{"id":"offline","type":"process","data":{"title":"Transcript files"}},
-		{"id":"local","type":"data","data":{"title":"Local files and reports"}},
-		{"id":"review","type":"terminal","data":{"title":"Consumer review and publishing"}},
-	]`}
+    {"id":"consumer","type":"origin","data":{"title":"Website or Uni Notes"}},
+    {"id":"package","type":"process","data":{"title":"Shared scraping package"}},
+    {"id":"browser","type":"process","data":{"title":"Canvas and syllabus"}},
+    {"id":"offline","type":"process","data":{"title":"Transcript files"}},
+    {"id":"local","type":"data","data":{"title":"Local files and reports"}},
+    {"id":"review","type":"terminal","data":{"title":"Consumer review and publishing"}}
+  ]`}
 	edges={`[
-		{"id":"consumer-package","source":"consumer","target":"package"},
-		{"id":"package-browser","source":"package","target":"browser"},
-		{"id":"package-offline","source":"package","target":"offline"},
-		{"id":"browser-local","source":"browser","target":"local"},
-		{"id":"offline-local","source":"offline","target":"local"},
-		{"id":"local-review","source":"local","target":"review"},
-	]`}
+    {"id":"consumer-package","source":"consumer","target":"package"},
+    {"id":"package-browser","source":"package","target":"browser"},
+    {"id":"package-offline","source":"package","target":"offline"},
+    {"id":"browser-local","source":"browser","target":"local"},
+    {"id":"offline-local","source":"offline","target":"local"},
+    {"id":"local-review","source":"local","target":"review"}
+  ]`}
 />
 
 ## Choose a section
@@ -41,7 +41,7 @@ The package saves source material to local files. Website and Uni Notes own the 
 
 ## Package boundaries
 
-The package provides reusable mechanics and local collection. It does not create or publish notes, send captured content to an AI service, or write to Docs or Sanity. Each consumer decides what to retain and how to review it.
+The package provides reusable mechanics and local collection. It does not create or publish notes, send captured content to an AI service, or write to Terra Docs or Sanity. Each consumer decides what to retain and how to review it.
 
 Install a reviewed Git tag in the Website or Uni Notes repository. Browser workflows also need Playwright's Chromium browser; the transcript inventory command is local and does not launch a browser.
 
@@ -119,7 +119,7 @@ Website can reuse browser, authentication, and concurrency helpers. It may suppl
 Uni Notes can use Canvas exports, downloaded syllabuses, and transcript inventory as local source material. It owns Markdown organization, content review, and deciding when material is added to the notes tree.
 
 |||
-Both consumers own service-specific account selection and selectors outside the shared Canvas and syllabus adapters. The package does not publish to Docs or Sanity and does not decide whether an export becomes a note.
+Both consumers own service-specific account selection and selectors outside the shared Canvas and syllabus adapters. The package does not publish to Terra Docs or Sanity and does not decide whether an export becomes a note.
 
 ## What the package stores
 
