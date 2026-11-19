@@ -24,7 +24,7 @@
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
-		"@terra-symposium/docs": "^0.4.22",
+		"@terra-symposium/docs": "^0.4.23",
 		"react": "19.3.1",
 		"react-dom": "19.3.1",
 		"@terra-symposium/hygiene": "^2.4.5",
