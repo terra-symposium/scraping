@@ -3,8 +3,6 @@ title: Parallel work
 description: Resolve shared worker limits, run bounded queues, and coordinate concurrent processes.
 ---
 
-import { NodesBlock } from '@terra-symposium/docs';
-export const Nodes = props => <NodesBlock block={props} />;
 
 The package provides helpers for two scopes. `runQueued` limits concurrency inside one Node process. `acquireWorkflowSlot` coordinates a limit across separate processes. `resolveWorkerCount` gives commands and applications the same worker-count precedence.
 
