@@ -62,8 +62,9 @@ After updating the dependency, install with that repository's lockfile and permi
 
 Use the CLI for a complete local collection task. Use the TypeScript API when the application needs to coordinate browser sessions, authentication, or worker limits with its own work.
 
-|||[TypeScript workflow] The consumer supplies its service-specific page setup, readiness predicate, and unit of work. This example shows the shared session and concurrency helpers together:
+|||[TypeScript workflow]
 
+The consumer supplies its service-specific page setup, readiness predicate, and unit of work. This example shows the shared session and concurrency helpers together:
 ```ts
 import { authenticateWorkflow, resolveWorkerCount, runQueued } from '@terra-symposium/scraping';
 
@@ -91,24 +92,35 @@ try {
 }
 ```
 
-The consuming application supplies the course list and its collection function. The [browser guide](/01-scraping/02-guides/01-browser-sessions/) explains session ownership and the [parallel-work guide](/01-scraping/02-guides/02-parallel-work/) explains worker limits and failures. |||
+The consuming application supplies the course list and its collection function. The [browser guide](/01-scraping/02-guides/01-browser-sessions/) explains session ownership and the [parallel-work guide](/01-scraping/02-guides/02-parallel-work/) explains worker limits and failures.
 
-|||[Command-line tools] Run an installed command from the consuming repository. Each command accepts --help.
+|||
 
+|||[Command-line tools]
+
+Run an installed command from the consuming repository. Each command accepts --help.
 ```sh
 pnpm exec canvas-export --canvas-url=https://canvas.example.edu/dashboard
 pnpm exec syllabus-fetch --state=NSW
 pnpm exec canvas-transcripts --input=/path/to/sources --output=/path/to/inventory --weeks=12
 ```
 
-Canvas and syllabus commands use Chromium. Transcript inventory reads .txt, .vtt, and .srt files and makes no network requests. |||
+Canvas and syllabus commands use Chromium. Transcript inventory reads .txt, .vtt, and .srt files and makes no network requests.
+
+|||
 
 ## Keep application responsibilities clear
 
-|||[Website] Website can reuse browser, authentication, and concurrency helpers. It may supply createSession when it needs its existing Chrome channel or persistent-profile selection. Gemini and Sanity selectors, account checks, screenshots, AI generation, and publishing remain Website-owned. |||
+|||[Website]
 
-|||[Uni Notes] Uni Notes can use Canvas exports, downloaded syllabuses, and transcript inventory as local source material. It owns Markdown organization, content review, and deciding when material is added to the notes tree. |||
+Website can reuse browser, authentication, and concurrency helpers. It may supply createSession when it needs its existing Chrome channel or persistent-profile selection. Gemini and Sanity selectors, account checks, screenshots, AI generation, and publishing remain Website-owned.
 
+|||
+|||[Uni Notes]
+
+Uni Notes can use Canvas exports, downloaded syllabuses, and transcript inventory as local source material. It owns Markdown organization, content review, and deciding when material is added to the notes tree.
+
+|||
 Both consumers own service-specific account selection and selectors outside the shared Canvas and syllabus adapters. The package does not publish to Terra Docs or Sanity and does not decide whether an export becomes a note.
 
 ## What the package stores
