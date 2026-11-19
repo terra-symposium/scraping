@@ -32,11 +32,7 @@ Resolve a worker count once, then pass it to the work queue. Use a process slot 
 
 ## Resolve worker counts
 
-```ts
-import { resolveWorkerCount } from '@terra-symposium/scraping';
-
-const workers = resolveWorkerCount(4, 'canvas');
-```
+<CodeBlock language='ts' code={"import { resolveWorkerCount } from '@terra-symposium/scraping';\n\nconst workers = resolveWorkerCount(4, 'canvas');"} />
 
 `resolveWorkerCount` selects the first valid positive safe integer in this order:
 
@@ -48,43 +44,29 @@ const workers = resolveWorkerCount(4, 'canvas');
 
 Invalid values (including zero, negative, fractional, and unsafe integers) are ignored. An invalid fallback resolves to `1`. Pass `argv` and `env` for deterministic lookup independent of the current process:
 
-```ts
-const workers = resolveWorkerCount(4, 'canvas', {
-	argv: ['node', 'export.mjs', '--headed'],
-	env: { PW_HEADED_WORKERS: '2', PW_WORKERS: '8' },
-});
-```
+<CodeBlock language='ts' code={"const workers = resolveWorkerCount(4, 'canvas', {\n\targv: ['node', 'export.mjs', '--headed'],\n\tenv: { PW_HEADED_WORKERS: '2', PW_WORKERS: '8' },\n});"} />
 
 ## Run work in one process
 
 |||[Bound a queue] `runQueued` starts no more than the selected number of workers. Each input is passed to `execute(item, index)` once.
 
-```ts
-import { resolveWorkerCount, runQueued } from '@terra-symposium/scraping';
-
-const failures = await runQueued(courseUrls, resolveWorkerCount(4, 'canvas'), async (courseUrl, index) => {
-	await exportCourse(courseUrl, index);
-});
-```
+<CodeBlock
+	language='ts'
+	code={
+		"import { resolveWorkerCount, runQueued } from '@terra-symposium/scraping';\n\nconst failures = await runQueued(courseUrls, resolveWorkerCount(4, 'canvas'), async (courseUrl, index) => {\n\tawait exportCourse(courseUrl, index);\n});"
+	}
+/>
 
 |||
 
 |||[Limit independent processes] `acquireWorkflowSlot` waits for one of the shared pool's slots and returns an idempotent async release callback.
 
-```ts
-import { acquireWorkflowSlot } from '@terra-symposium/scraping';
-
-const release = await acquireWorkflowSlot({
-	name: 'canvas-downloads',
-	size: 2,
-});
-
-try {
-	await downloadBatch();
-} finally {
-	await release();
-}
-```
+<CodeBlock
+	language='ts'
+	code={
+		"import { acquireWorkflowSlot } from '@terra-symposium/scraping';\n\nconst release = await acquireWorkflowSlot({\n\tname: 'canvas-downloads',\n\tsize: 2,\n});\n\ntry {\n\tawait downloadBatch();\n} finally {\n\tawait release();\n}"
+	}
+/>
 
 Keep lock names stable across callers. Processes sharing a pool must use the same size. |||
 

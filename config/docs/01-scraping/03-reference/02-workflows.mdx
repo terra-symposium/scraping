@@ -103,16 +103,12 @@ The default polling interval is 250 milliseconds; set `pollMs` to change it. Pas
 
 Always release the slot in `finally`:
 
-```ts
-import { acquireWorkflowSlot } from '@terra-symposium/scraping';
-
-const release = await acquireWorkflowSlot({ name: 'canvas-downloads', size: 2 });
-try {
-	await downloadBatch();
-} finally {
-	await release();
-}
-```
+<CodeBlock
+	language='ts'
+	code={
+		"import { acquireWorkflowSlot } from '@terra-symposium/scraping';\n\nconst release = await acquireWorkflowSlot({ name: 'canvas-downloads', size: 2 });\ntry {\n\tawait downloadBatch();\n} finally {\n\tawait release();\n}"
+	}
+/>
 
 See the [parallel-work guide](/01-scraping/02-guides/02-parallel-work/) for configuration examples and operational notes.
 

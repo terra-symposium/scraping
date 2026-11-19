@@ -51,10 +51,7 @@ Install a reviewed Git tag in the Website or Uni Notes repository. Browser workf
 
 Run these commands from the consuming repository:
 
-```sh
-pnpm add 'github:Terra-Symposium/scraping#v0.3.0'
-pnpm exec playwright install chromium
-```
+<CodeBlock language='sh' code={"pnpm add 'github:Terra-Symposium/scraping#v0.3.0'\npnpm exec playwright install chromium"} />
 
 After updating the dependency, install with that repository's lockfile and permit the package build step under its pnpm policy. Keep the resolved Git commit in the lockfile.
 
@@ -64,42 +61,23 @@ Use the CLI for a complete local collection task. Use the TypeScript API when th
 
 |||[TypeScript workflow] The consumer supplies its service-specific page setup, readiness predicate, and unit of work. This example shows the shared session and concurrency helpers together:
 
-```ts
-import { authenticateWorkflow, resolveWorkerCount, runQueued } from '@terra-symposium/scraping';
-
-const session = await authenticateWorkflow({
-	sessionName: 'course-workflow',
-	headed: false,
-	interactive: true,
-	open: async context => {
-		const page = await context.newPage();
-		await page.goto('https://example.edu/courses');
-		return page;
-	},
-	isReady: async page =>
-		page
-			.locator('[data-course-list]')
-			.isVisible()
-			.catch(() => false),
-});
-
-try {
-	const failures = await runQueued(courseIds, resolveWorkerCount(3, 'courses'), async courseId => collectCourse(courseId, session.value));
-	console.log(failures);
-} finally {
-	await session.close();
-}
-```
+<CodeBlock
+	language='ts'
+	code={
+		"import { authenticateWorkflow, resolveWorkerCount, runQueued } from '@terra-symposium/scraping';\n\nconst session = await authenticateWorkflow({\n\tsessionName: 'course-workflow',\n\theaded: false,\n\tinteractive: true,\n\topen: async context => {\n\t\tconst page = await context.newPage();\n\t\tawait page.goto('https://example.edu/courses');\n\t\treturn page;\n\t},\n\tisReady: async page =>\n\t\tpage\n\t\t\t.locator('[data-course-list]')\n\t\t\t.isVisible()\n\t\t\t.catch(() => false),\n});\n\ntry {\n\tconst failures = await runQueued(courseIds, resolveWorkerCount(3, 'courses'), async courseId => collectCourse(courseId, session.value));\n\tconsole.log(failures);\n} finally {\n\tawait session.close();\n}"
+	}
+/>
 
 The consuming application supplies the course list and its collection function. The [browser guide](/01-scraping/02-guides/01-browser-sessions/) explains session ownership and the [parallel-work guide](/01-scraping/02-guides/02-parallel-work/) explains worker limits and failures. |||
 
 |||[Command-line tools] Run an installed command from the consuming repository. Each command accepts --help.
 
-```sh
-pnpm exec canvas-export --canvas-url=https://canvas.example.edu/dashboard
-pnpm exec syllabus-fetch --state=NSW
-pnpm exec canvas-transcripts --input=/path/to/sources --output=/path/to/inventory --weeks=12
-```
+<CodeBlock
+	language='sh'
+	code={
+		'pnpm exec canvas-export --canvas-url=https://canvas.example.edu/dashboard\npnpm exec syllabus-fetch --state=NSW\npnpm exec canvas-transcripts --input=/path/to/sources --output=/path/to/inventory --weeks=12'
+	}
+/>
 
 Canvas and syllabus commands use Chromium. Transcript inventory reads .txt, .vtt, and .srt files and makes no network requests. |||
 

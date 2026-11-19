@@ -56,25 +56,18 @@ The default output directory is `~/Downloads/terra-symposium-scraping/syllabuses
 
 |||[Command line]
 
-```sh
-pnpm exec syllabus-fetch --state=NSW --headed --output=/path/to/syllabuses
-```
+<CodeBlock language='sh' code={'pnpm exec syllabus-fetch --state=NSW --headed --output=/path/to/syllabuses'} />
 
 The CLI supports `--state`, `--output`, `--file-name`, `--syllabus-name`, `--headed`, `--interactive`, `--storage-state`, and `--timeout`. Run `syllabus-fetch --help` for exact flags and defaults. The command prints the `FetchedAustralianSyllabus` result as JSON. |||
 
 |||[TypeScript API]
 
-```ts
-import { fetchAustralianSyllabus } from '@terra-symposium/scraping';
-
-const syllabus = await fetchAustralianSyllabus({
-	state: 'NSW',
-	headed: false,
-	outputDirectory: '/Users/you/Downloads/syllabuses',
-});
-
-console.log(syllabus.filePath);
-```
+<CodeBlock
+	language='ts'
+	code={
+		"import { fetchAustralianSyllabus } from '@terra-symposium/scraping';\n\nconst syllabus = await fetchAustralianSyllabus({\n\tstate: 'NSW',\n\theaded: false,\n\toutputDirectory: '/Users/you/Downloads/syllabuses',\n});\n\nconsole.log(syllabus.filePath);"
+	}
+/>
 
 The result includes the state code, sanitized source URL, absolute file path, saved basename, ISO `capturedAt` timestamp, and a `CollectedItem` for provenance. |||
 
@@ -86,13 +79,12 @@ The download-control timeout is 30 seconds by default. Interactive authenticatio
 
 Use `normalizeSyllabusDocument` to copy a local Word file or extract one Word file from an archive:
 
-```ts
-import { normalizeSyllabusDocument } from '@terra-symposium/scraping';
-
-const normalized = await normalizeSyllabusDocument('/path/to/download.zip', {
-	outputDirectory: '/Users/you/Downloads/syllabuses',
-});
-```
+<CodeBlock
+	language='ts'
+	code={
+		"import { normalizeSyllabusDocument } from '@terra-symposium/scraping';\n\nconst normalized = await normalizeSyllabusDocument('/path/to/download.zip', {\n\toutputDirectory: '/Users/you/Downloads/syllabuses',\n});"
+	}
+/>
 
 | Input             | Result                                                                            |
 | ----------------- | --------------------------------------------------------------------------------- |

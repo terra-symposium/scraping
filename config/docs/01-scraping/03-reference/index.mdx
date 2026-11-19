@@ -22,19 +22,18 @@ These are the supported package exports. Do not import files from `src/` or `dis
 
 |||[Root package import] The root import is the shortest option when the application uses several workflow areas:
 
-```ts
-import { authenticateWorkflow, resolveWorkerCount, runQueued } from '@terra-symposium/scraping';
-```
+<CodeBlock language='ts' code={"import { authenticateWorkflow, resolveWorkerCount, runQueued } from '@terra-symposium/scraping';"} />
 
 |||
 
 |||[Focused imports] Use a focused subpath when the module boundary should be explicit:
 
-```ts
-import { scrapeCanvas } from '@terra-symposium/scraping/canvas';
-import type { CanvasScrapeOptions } from '@terra-symposium/scraping/canvas';
-import { fetchAustralianSyllabus } from '@terra-symposium/scraping/workflows/syllabus';
-```
+<CodeBlock
+	language='ts'
+	code={
+		"import { scrapeCanvas } from '@terra-symposium/scraping/canvas';\nimport type { CanvasScrapeOptions } from '@terra-symposium/scraping/canvas';\nimport { fetchAustralianSyllabus } from '@terra-symposium/scraping/workflows/syllabus';"
+	}
+/>
 
 |||
 

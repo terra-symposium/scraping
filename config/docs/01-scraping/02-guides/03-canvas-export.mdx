@@ -39,33 +39,22 @@ The Canvas workflow discovers courses and module groups visible to a signed-in u
 
 Install a reviewed Git tag and Playwright Chromium in the consuming repository:
 
-```sh
-pnpm add 'github:Terra-Symposium/scraping#v0.3.0'
-pnpm exec playwright install chromium
-```
+<CodeBlock language='sh' code={"pnpm add 'github:Terra-Symposium/scraping#v0.3.0'\npnpm exec playwright install chromium"} />
 
 |||[Command line]
 
-```sh
-pnpm exec canvas-export --canvas-url=https://canvas.example.edu/dashboard --headed --groups="Week 1,Week 2"
-```
+<CodeBlock language='sh' code={'pnpm exec canvas-export --canvas-url=https://canvas.example.edu/dashboard --headed --groups="Week 1,Week 2"'} />
 
 The default output is `~/Downloads/canvas-export`. Use `--output=PATH` to change it. `--groups` accepts comma-separated, case-insensitive title fragments; any fragment may match. Use `--all-courses` to include every visible course. The [Canvas CLI reference](/01-scraping/03-reference/03-command-line/#canvas-export) lists every option. |||
 
 |||[TypeScript API] Use `scrapeCanvas` for the complete workflow when the package should own authentication, file paths, manifests, logging, and browser cleanup:
 
-```ts
-import { scrapeCanvas } from '@terra-symposium/scraping/canvas';
-
-const result = await scrapeCanvas({
-	canvasUrl: 'https://canvas.example.edu/dashboard',
-	groupMatches: ['Week 1', 'Week 2'],
-	headed: true,
-	interactive: true,
-});
-
-console.log(result.output, result.manifest);
-```
+<CodeBlock
+	language='ts'
+	code={
+		"import { scrapeCanvas } from '@terra-symposium/scraping/canvas';\n\nconst result = await scrapeCanvas({\n\tcanvasUrl: 'https://canvas.example.edu/dashboard',\n\tgroupMatches: ['Week 1', 'Week 2'],\n\theaded: true,\n\tinteractive: true,\n});\n\nconsole.log(result.output, result.manifest);"
+	}
+/>
 
 The [Canvas API reference](/01-scraping/03-reference/01-canvas/) documents all options and return fields. |||
 
@@ -87,57 +76,21 @@ The CLI accepts `--interactive` as an alias for `--headed`. Either flag displays
 
 Use the lower-level functions when the consumer needs to compose discovery and collection with its own browser lifecycle:
 
-```ts
-import { authenticateWorkflow, discoverCanvasCourses, scrapeCanvasCourse } from '@terra-symposium/scraping';
-
-const session = await authenticateWorkflow({
-	sessionName: 'canvas',
-	headed: true,
-	interactive: true,
-	open: async context => {
-		const page = await context.newPage();
-		await page.goto('https://canvas.example.edu/dashboard');
-		return page;
-	},
-	isReady: async page =>
-		page
-			.locator('#context_modules, .ic-DashboardCard__link')
-			.first()
-			.isVisible()
-			.catch(() => false),
-});
-
-try {
-	const courses = await discoverCanvasCourses(session.value, 'https://canvas.example.edu/dashboard');
-	const first = courses[0];
-	if (first) {
-		await scrapeCanvasCourse({
-			page: session.value,
-			request: session.context.request,
-			course: first,
-			output: '/tmp/canvas-export',
-			groupMatches: ['Week 1'],
-		});
+<CodeBlock
+	language='ts'
+	code={
+		"import { authenticateWorkflow, discoverCanvasCourses, scrapeCanvasCourse } from '@terra-symposium/scraping';\n\nconst session = await authenticateWorkflow({\n\tsessionName: 'canvas',\n\theaded: true,\n\tinteractive: true,\n\topen: async context => {\n\t\tconst page = await context.newPage();\n\t\tawait page.goto('https://canvas.example.edu/dashboard');\n\t\treturn page;\n\t},\n\tisReady: async page =>\n\t\tpage\n\t\t\t.locator('#context_modules, .ic-DashboardCard__link')\n\t\t\t.first()\n\t\t\t.isVisible()\n\t\t\t.catch(() => false),\n});\n\ntry {\n\tconst courses = await discoverCanvasCourses(session.value, 'https://canvas.example.edu/dashboard');\n\tconst first = courses[0];\n\tif (first) {\n\t\tawait scrapeCanvasCourse({\n\t\t\tpage: session.value,\n\t\t\trequest: session.context.request,\n\t\t\tcourse: first,\n\t\t\toutput: '/tmp/canvas-export',\n\t\t\tgroupMatches: ['Week 1'],\n\t\t});\n\t}\n} finally {\n\tawait session.close();\n}"
 	}
-} finally {
-	await session.close();
-}
-```
+/>
 
 Pass the `Page` and `APIRequestContext` from the same authenticated `BrowserContext`. Lower-level discovery and scrape functions do not own or close the browser. `scrapeCanvasCourse` visits a course's module page and processes selected groups sequentially.
 
 ## Output files and failure handling
 
-```text
-<output>/
-  manifest.json
-  canvas-export.log
-  <course-name>/
-    <module-name>/
-      <module-name>.txt
-      <page-id>-<page-title>.txt
-      <file-id>-<safe-file-name>
-```
+<CodeBlock
+	language='text'
+	code={'<output>/\n  manifest.json\n  canvas-export.log\n  <course-name>/\n    <module-name>/\n      <module-name>.txt\n      <page-id>-<page-title>.txt\n      <file-id>-<safe-file-name>'}
+/>
 
 The exporter uses Unicode-normalized lowercase slugs for course and module folders. Each module text file combines the readable pages, and each page has its own text file for source-level reconciliation. Direct and page-linked Canvas files are downloaded through the authenticated request context. External links are recorded but not fetched. Duplicate course-file URLs are downloaded once within each group.
 

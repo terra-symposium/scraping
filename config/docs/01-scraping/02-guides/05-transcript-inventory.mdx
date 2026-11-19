@@ -35,15 +35,11 @@ The `canvas-transcripts` command organizes local transcript and caption files in
 
 ## Run the inventory
 
-```sh
-pnpm exec canvas-transcripts --input=/path/to/transcript-sources --output=/path/to/transcript-inventory --weeks=12
-```
+<CodeBlock language='sh' code={'pnpm exec canvas-transcripts --input=/path/to/transcript-sources --output=/path/to/transcript-inventory --weeks=12'} />
 
 Optional metadata inputs:
 
-```sh
-pnpm exec canvas-transcripts --input=EXPORT_DIR --output=TRANSCRIPT_DIR --weeks=12 --mapping=source-map.json --expected=expected-meetings.json
-```
+<CodeBlock language='sh' code={'pnpm exec canvas-transcripts --input=EXPORT_DIR --output=TRANSCRIPT_DIR --weeks=12 --mapping=source-map.json --expected=expected-meetings.json'} />
 
 The required input and output paths must resolve to different directories. Keep output separate from input. A child output folder is skipped while scanning; placing input inside output causes those files to be skipped. Paths are resolved from the command's current working directory.
 
@@ -66,25 +62,12 @@ The manifest records the inference method (manual-mapping, path-pattern, or unre
 
 ===[Source mapping file] The mapping file can contain a top-level `sources` object or the path-keyed object directly. Prefer paths relative to the input directory so files with duplicate basenames remain distinguishable:
 
-```json
-{
-	"sources": {
-		"week-01/zoom-session-123.vtt": {
-			"week": 1,
-			"meetingTitle": "Week 1 lecture",
-			"meetingDate": "2026-03-02",
-			"platform": "Zoom",
-			"captureMethod": "manual-caption-copy",
-			"transcriptOrigin": "hosted captions",
-			"language": "en-AU",
-			"visibleVerification": "matched to the course recording page",
-			"captionStatus": "available",
-			"expectedIds": ["week-01-lecture"],
-			"recordingUrl": "https://video.example.edu/recordings/123"
-		}
+<CodeBlock
+	language='json'
+	code={
+		'{\n\t"sources": {\n\t\t"week-01/zoom-session-123.vtt": {\n\t\t\t"week": 1,\n\t\t\t"meetingTitle": "Week 1 lecture",\n\t\t\t"meetingDate": "2026-03-02",\n\t\t\t"platform": "Zoom",\n\t\t\t"captureMethod": "manual-caption-copy",\n\t\t\t"transcriptOrigin": "hosted captions",\n\t\t\t"language": "en-AU",\n\t\t\t"visibleVerification": "matched to the course recording page",\n\t\t\t"captionStatus": "available",\n\t\t\t"expectedIds": ["week-01-lecture"],\n\t\t\t"recordingUrl": "https://video.example.edu/recordings/123"\n\t\t}\n\t}\n}'
 	}
-}
-```
+/>
 
 A mapping key can also be a filename. A unique basename match is accepted; if multiple mapped paths share that basename, the mapping remains ambiguous. Path matches take precedence.
 
@@ -96,20 +79,12 @@ Provenance is recorded only when platform and either captureMethod or transcript
 
 ===[Expected-meetings file] Use this optional file to report whether each known meeting has a matching transcript source:
 
-```json
-{
-	"meetings": [
-		{
-			"id": "week-01-lecture",
-			"week": 1,
-			"title": "Week 1 lecture",
-			"required": true,
-			"matchAny": ["lecture one", "session 1"],
-			"expectedIds": ["week-01-lecture"]
-		}
-	]
-}
-```
+<CodeBlock
+	language='json'
+	code={
+		'{\n\t"meetings": [\n\t\t{\n\t\t\t"id": "week-01-lecture",\n\t\t\t"week": 1,\n\t\t\t"title": "Week 1 lecture",\n\t\t\t"required": true,\n\t\t\t"matchAny": ["lecture one", "session 1"],\n\t\t\t"expectedIds": ["week-01-lecture"]\n\t\t}\n\t]\n}'
+	}
+/>
 
 Each meeting needs a non-empty id and a positive integer week. title and required are optional; required defaults to true. matchAny and expectedIds are optional arrays of strings.
 
