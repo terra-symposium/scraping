@@ -62,10 +62,16 @@ The default course-title filter recognizes a season followed by a four-digit yea
 
 The top-level exporter stores files under:
 
-<CodeBlock
-	language='text'
-	code={'<output>/\n  manifest.json\n  canvas-export.log\n  <course-name>/\n    <module-name>/\n      <module-name>.txt\n      <page-id>-<page-title>.txt\n      <file-id>-<safe-file-name>'}
-/>
+```text
+<output>/
+  manifest.json
+  canvas-export.log
+  <course-name>/
+    <module-name>/
+      <module-name>.txt
+      <page-id>-<page-title>.txt
+      <file-id>-<safe-file-name>
+```
 
 The default output directory is `~/Downloads/canvas-export`. Course and module folder names are Unicode-normalized lowercase slugs limited to 120 characters. Each module text file combines the readable pages for convenience; each captured page also has its own text file. The group's `files` array includes the combined file and downloaded attachments.
 

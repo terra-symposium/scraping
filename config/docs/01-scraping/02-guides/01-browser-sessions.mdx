@@ -50,12 +50,15 @@ The default interactive-authentication timeout is 15 minutes. Readiness is polle
 
 Use `launchWorkflowSession` for direct control of the browser lifetime, or `withWorkflowSession` when a callback should own cleanup:
 
-<CodeBlock
-	language='ts'
-	code={
-		"import { withWorkflowSession } from '@terra-symposium/scraping';\n\nconst titles = await withWorkflowSession({ headed: false, storageStatePath: '/secure/path/session.json' }, async ({ context }) => {\n\tconst page = await context.newPage();\n\tawait page.goto('https://example.edu');\n\treturn page.locator('h1').allTextContents();\n});"
-	}
-/>
+```ts
+import { withWorkflowSession } from '@terra-symposium/scraping';
+
+const titles = await withWorkflowSession({ headed: false, storageStatePath: '/secure/path/session.json' }, async ({ context }) => {
+	const page = await context.newPage();
+	await page.goto('https://example.edu');
+	return page.locator('h1').allTextContents();
+});
+```
 
 The default is headless Chromium. `headed: true` displays the window. Downloads are enabled by default. A supplied `storageStatePath` is loaded only when the file exists; `launchWorkflowSession` does not save updated state. Close a returned session in `finally`.
 
@@ -63,12 +66,32 @@ The default is headless Chromium. `headed: true` displays the window. Downloads 
 
 Use `authenticateWorkflow` when the consumer can tell whether the application is ready:
 
-<CodeBlock
-	language='ts'
-	code={
-		"import { authenticateWorkflow } from '@terra-symposium/scraping';\n\nconst session = await authenticateWorkflow({\n\tsessionName: 'course-notes',\n\theaded: false,\n\tinteractive: true,\n\topen: async context => {\n\t\tconst page = await context.newPage();\n\t\tawait page.goto('https://example.edu/courses');\n\t\treturn page;\n\t},\n\tisReady: async page =>\n\t\tpage\n\t\t\t.locator('[data-course-list]')\n\t\t\t.isVisible()\n\t\t\t.catch(() => false),\n\tonInteractiveStart: () => console.log('Sign in in the visible browser.'),\n});\n\ntry {\n\tconsole.log(await session.value.title());\n} finally {\n\tawait session.close();\n}"
-	}
-/>
+```ts
+import { authenticateWorkflow } from '@terra-symposium/scraping';
+
+const session = await authenticateWorkflow({
+	sessionName: 'course-notes',
+	headed: false,
+	interactive: true,
+	open: async context => {
+		const page = await context.newPage();
+		await page.goto('https://example.edu/courses');
+		return page;
+	},
+	isReady: async page =>
+		page
+			.locator('[data-course-list]')
+			.isVisible()
+			.catch(() => false),
+	onInteractiveStart: () => console.log('Sign in in the visible browser.'),
+});
+
+try {
+	console.log(await session.value.title());
+} finally {
+	await session.close();
+}
+```
 
 `open` returns the value checked by `isReady`. The readiness callback must return true only when the workflow can safely continue. The returned session includes that value, its browser and context, an async `close()` function, and the absolute `storageStatePath`.
 

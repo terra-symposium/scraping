@@ -9,15 +9,22 @@ The package and its Docs and quality tooling use separate dependency directories
 
 |||[Build and run quality] From the repository root, install package dependencies and build the TypeScript package:
 
-<CodeBlock language='sh' code={'pnpm install\npnpm run build'} />
+```sh
+pnpm install
+pnpm run build
+```
 
 Install the Docs and quality-tool dependencies from the committed lockfile:
 
-<CodeBlock language='sh' code={'pnpm --dir config install --frozen-lockfile'} />
+```sh
+pnpm --dir config install --frozen-lockfile
+```
 
 Run the complete quality wrapper from the repository root:
 
-<CodeBlock language='sh' code={'pnpm run quality'} />
+```sh
+pnpm run quality
+```
 
 Quality runs the configured static checks. Run `pnpm run test` for the package build and test suite, and `pnpm --dir config run build` for the Docs site. `pnpm run verify` runs full-scope Quality and the package tests.
 
@@ -25,11 +32,17 @@ To build only one artifact, use `pnpm run build` for the TypeScript package or `
 
 |||[Build and serve Docs] Build and serve the static Docs output from the repository root:
 
-<CodeBlock language='sh' code={'pnpm --dir config run build\npnpm --dir config run preview'} />
+```sh
+pnpm --dir config run build
+pnpm --dir config run preview
+```
 
 The preview runs in the background at `http://127.0.0.1:2060/`. Check its status or stop it with:
 
-<CodeBlock language='sh' code={'pnpm --dir config exec astro preview status\npnpm --dir config exec astro preview stop'} />
+```sh
+pnpm --dir config exec astro preview status
+pnpm --dir config exec astro preview stop
+```
 
 :::note[Live editing]
 
