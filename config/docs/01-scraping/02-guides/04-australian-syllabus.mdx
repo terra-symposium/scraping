@@ -3,7 +3,6 @@ title: Australian syllabus acquisition
 description: Open configured Australian curriculum pages, download Word syllabuses, and normalize local documents.
 ---
 
-
 The syllabus workflow downloads a Word file from one configured Australian state or territory curriculum page. It opens the public page, prepares its download controls, and saves the result locally. It does not convert the document or create notes.
 
 ## Download flow
@@ -107,8 +106,7 @@ The default output directory is the same Downloads folder used by the fetch work
 
 For ZIP input, the helper chooses the first alphabetically sorted `.doc` or `.docx` entry whose path does not contain “syllabus support”. Only that document is extracted.
 
-===
-`prepareAustralianSyllabusPage(page, state, options)` navigates the given Playwright page when it is not already on the configured source page. For NSW, it selects `options.syllabusName` or the configured default and prepares the curriculum checkboxes. Other jurisdictions currently keep the configured page as-is.
+=== `prepareAustralianSyllabusPage(page, state, options)` navigates the given Playwright page when it is not already on the configured source page. For NSW, it selects `options.syllabusName` or the configured default and prepares the curriculum checkboxes. Other jurisdictions currently keep the configured page as-is.
 
 `isAustralianSyllabusPageReady(page)` rejects login, SAML, and sign-in routes and checks for readable body text. It indicates a public page is readable; it is not a credential check.
 

@@ -3,7 +3,6 @@ title: Parallel work
 description: Resolve shared worker limits, run bounded queues, and coordinate concurrent processes.
 ---
 
-
 The package provides helpers for two scopes. `runQueued` limits concurrency inside one Node process. `acquireWorkflowSlot` coordinates a limit across separate processes. `resolveWorkerCount` gives commands and applications the same worker-count precedence.
 
 ## Choose the coordination scope
@@ -58,6 +57,7 @@ const workers = resolveWorkerCount(4, 'canvas', {
 |||[Bound a queue]
 
 `runQueued` starts no more than the selected number of workers. Each input is passed to `execute(item, index)` once.
+
 ```ts
 import { resolveWorkerCount, runQueued } from '@terra-symposium/scraping';
 
@@ -71,6 +71,7 @@ const failures = await runQueued(courseUrls, resolveWorkerCount(4, 'canvas'), as
 |||[Limit independent processes]
 
 `acquireWorkflowSlot` waits for one of the shared pool's slots and returns an idempotent async release callback.
+
 ```ts
 import { acquireWorkflowSlot } from '@terra-symposium/scraping';
 
@@ -98,8 +99,7 @@ Invalid, non-finite, zero, or negative worker counts result in one worker. Finit
 
 ===[Cross-process slot details]
 
-Without `directory`, the pool is under the OS temporary directory and scoped to a hash of the resolved current working directory plus the sanitized pool name. Processes in the same checkout using the same name share a pool; different working directories receive separate default pools.
-Set `directory` to the same resolved path in each process when callers from different working directories must coordinate. An explicit directory replaces the default name-scoped path. All processes sharing a pool must agree on its size.
+Without `directory`, the pool is under the OS temporary directory and scoped to a hash of the resolved current working directory plus the sanitized pool name. Processes in the same checkout using the same name share a pool; different working directories receive separate default pools. Set `directory` to the same resolved path in each process when callers from different working directories must coordinate. An explicit directory replaces the default name-scoped path. All processes sharing a pool must agree on its size.
 
 The default polling interval is 250 milliseconds; set `pollMs` to change it. An `AbortSignal` can cancel a waiting acquisition; the helper throws `signal.reason` when available, or an abort error. Invalid lock files and locks owned by dead processes are removed when encountered. Locks whose owner cannot be inspected because of permission limits are treated as active.
 

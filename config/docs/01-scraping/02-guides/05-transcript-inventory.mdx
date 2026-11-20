@@ -3,7 +3,6 @@ title: Transcript inventory
 description: Inventory local transcript and caption files with week coverage, duplicate detection, and provenance metadata.
 ---
 
-
 The `canvas-transcripts` command organizes local transcript and caption files into weekly text files and a JSON coverage report. It never opens a browser, fetches remote content, modifies Canvas, or changes the input files.
 
 ## Inventory flow
@@ -65,6 +64,7 @@ The manifest records the inference method (manual-mapping, path-pattern, or unre
 ===[Source mapping file]
 
 The mapping file can contain a top-level `sources` object or the path-keyed object directly. Prefer paths relative to the input directory so files with duplicate basenames remain distinguishable:
+
 ```json
 {
 	"sources": {
@@ -96,6 +96,7 @@ Provenance is recorded only when platform and either captureMethod or transcript
 ===[Expected-meetings file]
 
 Use this optional file to report whether each known meeting has a matching transcript source:
+
 ```json
 {
 	"meetings": [
