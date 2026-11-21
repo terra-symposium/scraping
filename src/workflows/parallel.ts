@@ -17,33 +17,59 @@ import { setTimeout as delay } from 'node:timers/promises';
 CONFIG
 //////////////////////////////////////////////////*/
 
-/** One failed item from a bounded workflow queue. */
+/**
+ * One failed item from a bounded workflow queue.
+ */
 export type QueueFailure<T> = {
-	/** Index of the failed input item. */
+	/**
+	 * Index of the failed input item.
+	 */
 	index: number;
-	/** Input value that failed. */
+	/**
+	 * Input value that failed.
+	 */
 	item: T;
-	/** Original value thrown by the worker. */
+	/**
+	 * Original value thrown by the worker.
+	 */
 	error: unknown;
 };
-/** Optional inputs for deterministic worker-count resolution. */
+/**
+ * Optional inputs for deterministic worker-count resolution.
+ */
 export type ResolveWorkerCountOptions = {
-	/** CLI arguments to inspect; defaults to the current process arguments. */
+	/**
+	 * CLI arguments to inspect; defaults to the current process arguments.
+	 */
 	argv?: readonly string[];
-	/** Environment values to inspect; defaults to the current process environment. */
+	/**
+	 * Environment values to inspect; defaults to the current process environment.
+	 */
 	env?: NodeJS.ProcessEnv;
 };
-/** Options for acquiring a cross-process workflow slot. */
+/**
+ * Options for acquiring a cross-process workflow slot.
+ */
 export type WorkflowSlotOptions = {
-	/** Pool identifier, used to keep independent workflows separate. */
+	/**
+	 * Pool identifier, used to keep independent workflows separate.
+	 */
 	name: string;
-	/** Maximum number of simultaneous slots. */
+	/**
+	 * Maximum number of simultaneous slots.
+	 */
 	size: number;
-	/** Optional lock directory; the default is scoped to this repository in the OS temp folder. */
+	/**
+	 * Optional lock directory; the default is scoped to this repository in the OS temp folder.
+	 */
 	directory?: string;
-	/** Time between lock attempts in milliseconds. Defaults to 250. */
+	/**
+	 * Time between lock attempts in milliseconds. Defaults to 250.
+	 */
 	pollMs?: number;
-	/** Optional signal that cancels a waiting acquisition. */
+	/**
+	 * Optional signal that cancels a waiting acquisition.
+	 */
 	signal?: AbortSignal;
 };
 

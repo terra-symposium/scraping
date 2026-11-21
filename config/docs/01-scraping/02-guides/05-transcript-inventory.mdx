@@ -91,6 +91,8 @@ The report copies only week, meetingTitle, meetingDate, platform, captureMethod,
 
 Provenance is recorded only when platform and either captureMethod or transcriptOrigin are present. Otherwise it is incomplete-or-unknown. This describes supplied metadata completeness; it does not prove accuracy.
 
+===
+
 ## Check expected-meeting coverage
 
 ===[Expected-meetings file]
@@ -126,6 +128,8 @@ Expected-meeting matching reports one of these statuses:
 | missing         | No matching source was found.                                   |
 
 Required meetings without found status appear in `missingExpectedMeetings` and the relevant week's `missingExpectedIds`. Optional meetings remain in the per-week report but do not make a week partial.
+
+===
 
 ## Review the output
 

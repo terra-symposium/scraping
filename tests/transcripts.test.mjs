@@ -1,3 +1,13 @@
+/**
+ * tests/transcripts.test.mjs
+ * Checks transcript inventory output and input safety.
+ */
+
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
 import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
@@ -6,6 +16,10 @@ import process from 'node:process';
 import { spawnSync } from 'node:child_process';
 import { URL, fileURLToPath } from 'node:url';
 import test from 'node:test';
+
+/*//////////////////////////////////////////////////
+HELPERS
+//////////////////////////////////////////////////*/
 
 /**
  * Runs the inventory command against temporary local fixtures without launching a browser or making network requests.
@@ -16,6 +30,10 @@ import test from 'node:test';
 function runTranscriptInventory(args) {
 	return spawnSync(process.execPath, [fileURLToPath(new URL('../src/cli/transcripts.mjs', import.meta.url)), ...args], { encoding: 'utf8' });
 }
+
+/*//////////////////////////////////////////////////
+TESTS
+//////////////////////////////////////////////////*/
 
 test('transcript inventory reports coverage and removes URL secrets from mapped metadata', async () => {
 	const root = await mkdtemp(path.join(os.tmpdir(), 'transcript-inventory-'));

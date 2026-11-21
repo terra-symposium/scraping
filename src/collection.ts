@@ -1,6 +1,15 @@
+/**
+ * src/collection.ts
+ */
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
 import { access } from 'node:fs/promises';
 
-/** One discovered source item, including unsuccessful and excluded items. */
+/**
+ * One discovered source item, including unsuccessful and excluded items.
+ */
 export type CollectedItem = {
 	sourceId: string;
 	title: string;

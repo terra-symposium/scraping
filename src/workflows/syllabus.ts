@@ -27,18 +27,28 @@ REGEX
 
 const DOCX_I_REGEX = /^\.docx?$/i;
 
-/** Australian state or territory supported by the syllabus acquisition workflow. */
+/**
+ * Australian state or territory supported by the syllabus acquisition workflow.
+ */
 export type AustralianSyllabusState = 'ACT' | 'NSW' | 'NT' | 'QLD' | 'SA' | 'TAS' | 'VIC' | 'WA';
 
-/** Public curriculum page and default syllabus selection for one Australian jurisdiction. */
+/**
+ * Public curriculum page and default syllabus selection for one Australian jurisdiction.
+ */
 export type AustralianSyllabusSource = {
-	/** Public source page opened by the browser workflow. */
+	/**
+	 * Public source page opened by the browser workflow.
+	 */
 	url: string;
-	/** Default syllabus label selected on sites that expose a custom picker. */
+	/**
+	 * Default syllabus label selected on sites that expose a custom picker.
+	 */
 	syllabusName?: string;
 };
 
-/** Public curriculum source pages for Australian states and territories. */
+/**
+ * Public curriculum source pages for Australian states and territories.
+ */
 export const AUSTRALIAN_SYLLABUS_SOURCES: Record<AustralianSyllabusState, AustralianSyllabusSource> = {
 	ACT: { url: 'https://www.act.gov.au/education-and-training/teaching-and-assessment/what-we-teach-curriculum#High-school-years-7-to-10-' },
 	NSW: { url: 'https://curriculum.nsw.edu.au/custom', syllabusName: 'English K–10 (2022)' },
@@ -50,67 +60,121 @@ export const AUSTRALIAN_SYLLABUS_SOURCES: Record<AustralianSyllabusState, Austra
 	WA: { url: 'https://k10outline.scsa.wa.edu.au/home/teaching/curriculum-browser' },
 };
 
-/** Options for preparing a jurisdiction's curriculum page. */
+/**
+ * Options for preparing a jurisdiction's curriculum page.
+ */
 export type PrepareAustralianSyllabusPageOptions = {
-	/** Syllabus label to select on the NSW custom syllabus page. */
+	/**
+	 * Syllabus label to select on the NSW custom syllabus page.
+	 */
 	syllabusName?: string;
 };
 
-/** Options for downloading a syllabus file through its public curriculum page. */
+/**
+ * Options for downloading a syllabus file through its public curriculum page.
+ */
 export type FetchAustralianSyllabusOptions = PrepareAustralianSyllabusPageOptions & {
-	/** Jurisdiction whose curriculum page and default selection should be used. */
+	/**
+	 * Jurisdiction whose curriculum page and default selection should be used.
+	 */
 	state: AustralianSyllabusState;
-	/** Directory where the downloaded file is saved. */
+	/**
+	 * Directory where the downloaded file is saved.
+	 */
 	outputDirectory?: string;
-	/** Optional filename override for the saved download. */
+	/**
+	 * Optional filename override for the saved download.
+	 */
 	fileName?: string;
-	/** Whether the browser window should remain visible after the workflow returns. */
+	/**
+	 * Whether the browser window should remain visible after the workflow returns.
+	 */
 	headed?: boolean;
-	/** Whether a visible browser may be opened for a manual sign-in. */
+	/**
+	 * Whether a visible browser may be opened for a manual sign-in.
+	 */
 	interactive?: boolean;
-	/** Optional Playwright storage-state file for a source that requires sign-in. */
+	/**
+	 * Optional Playwright storage-state file for a source that requires sign-in.
+	 */
 	storageStatePath?: string;
-	/** Maximum time allowed for sign-in or the download control, in milliseconds. */
+	/**
+	 * Maximum time allowed for sign-in or the download control, in milliseconds.
+	 */
 	timeoutMs?: number;
-	/** Optional callback shown when manual sign-in is needed. */
+	/**
+	 * Optional callback shown when manual sign-in is needed.
+	 */
 	onInteractiveStart?: () => void | Promise<void>;
-	/** Optional factory for consumer-specific browser sessions. */
+	/**
+	 * Optional factory for consumer-specific browser sessions.
+	 */
 	createSession?: (options: WorkflowSessionFactoryOptions) => Promise<WorkflowBrowserSession>;
 };
 
-/** Metadata for a locally saved syllabus download. */
+/**
+ * Metadata for a locally saved syllabus download.
+ */
 export type FetchedAustralianSyllabus = {
-	/** Jurisdiction used to select the curriculum page. */
+	/**
+	 * Jurisdiction used to select the curriculum page.
+	 */
 	state: AustralianSyllabusState;
-	/** Safe source page URL without credentials, query, or fragment. */
+	/**
+	 * Safe source page URL without credentials, query, or fragment.
+	 */
 	sourceUrl: string;
-	/** Absolute path to the downloaded file. */
+	/**
+	 * Absolute path to the downloaded file.
+	 */
 	filePath: string;
-	/** Saved filename. */
+	/**
+	 * Saved filename.
+	 */
 	fileName: string;
-	/** Time when the download was completed. */
+	/**
+	 * Time when the download was completed.
+	 */
 	capturedAt: string;
-	/** Shared provenance record for this downloaded source. */
+	/**
+	 * Shared provenance record for this downloaded source.
+	 */
 	item: CollectedItem;
 };
 
-/** Options for normalizing a local syllabus document or archive. */
+/**
+ * Options for normalizing a local syllabus document or archive.
+ */
 export type NormalizeSyllabusDocumentOptions = {
-	/** Directory that receives the normalized file. */
+	/**
+	 * Directory that receives the normalized file.
+	 */
 	outputDirectory?: string;
-	/** Optional filename override for a direct document. */
+	/**
+	 * Optional filename override for a direct document.
+	 */
 	fileName?: string;
 };
 
-/** Result from copying a syllabus document or extracting one document from an archive. */
+/**
+ * Result from copying a syllabus document or extracting one document from an archive.
+ */
 export type NormalizedSyllabusDocument = {
-	/** Absolute path to the resulting Word document. */
+	/**
+	 * Absolute path to the resulting Word document.
+	 */
 	filePath: string;
-	/** Filename of the resulting document. */
+	/**
+	 * Filename of the resulting document.
+	 */
 	fileName: string;
-	/** Absolute path to the input document or archive. */
+	/**
+	 * Absolute path to the input document or archive.
+	 */
 	sourcePath: string;
-	/** Archive entry name when a Word document was extracted from a ZIP file. */
+	/**
+	 * Archive entry name when a Word document was extracted from a ZIP file.
+	 */
 	archiveEntry?: string;
 };
 

@@ -1,3 +1,13 @@
+/**
+ * tests/canvas.test.mjs
+ * Checks Canvas discovery, navigation, capture, and export.
+ */
+
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
 import assert from 'node:assert/strict';
 import { Buffer } from 'node:buffer';
 import { access, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
@@ -23,6 +33,10 @@ import {
 	scrapeCanvas,
 	scrapeCanvasGroup,
 } from '../dist/canvas.js';
+
+/*//////////////////////////////////////////////////
+HELPERS
+//////////////////////////////////////////////////*/
 
 /**
  * Builds an anchor-like Canvas DOM fixture used by serialized browser callbacks.
@@ -78,7 +92,8 @@ function canvasPageFixture(options = {}) {
 				return locator;
 			},
 		},
-		/** Current URL of the fixture page.
+		/**
+		 * Current URL of the fixture page.
 		 * @return The page URL.
 		 */
 		get url() {
@@ -86,6 +101,10 @@ function canvasPageFixture(options = {}) {
 		},
 	};
 }
+
+/*//////////////////////////////////////////////////
+TESTS
+//////////////////////////////////////////////////*/
 
 test('Canvas URL and file helpers normalize routes, names, and preview responses', () => {
 	assert.equal(normalizeCanvasUrl('https://student:secret@canvas.example/courses/9?token=private#module'), 'https://canvas.example/courses/9');

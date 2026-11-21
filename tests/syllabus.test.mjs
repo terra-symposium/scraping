@@ -1,3 +1,13 @@
+/**
+ * tests/syllabus.test.mjs
+ * Checks syllabus archive, page, and download handling.
+ */
+
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
 import assert from 'node:assert/strict';
 import { Buffer } from 'node:buffer';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
@@ -8,6 +18,10 @@ import AdmZip from 'adm-zip';
 import { AUSTRALIAN_SYLLABUS_SOURCES, fetchAustralianSyllabus, isAustralianSyllabusPageReady, normalizeSyllabusDocument, prepareAustralianSyllabusPage } from '../dist/workflows/syllabus.js';
 
 // Verify archive normalization selects the first syllabus document and skips support files.
+/*//////////////////////////////////////////////////
+TESTS
+//////////////////////////////////////////////////*/
+
 test('syllabus archive normalization ignores support documents and selects deterministically', async () => {
 	const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'scraping-syllabus-test-'));
 	try {
@@ -100,7 +114,8 @@ test('NSW syllabus preparation fills the picker and selects every enabled checkb
 });
 
 test('syllabus readiness rejects login routes and sign-in pages', async () => {
-	/** Creates a page stub with a URL and visible body text.
+	/**
+	 * Creates a page stub with a URL and visible body text.
 	 * @param url Page address returned by the stub.
 	 * @param text Visible body text returned by the stub.
 	 * @returns A minimal page implementation for readiness checks.
@@ -132,13 +147,15 @@ test('syllabus download completes interactive authentication and closes each ses
 				// hygiene-ignore single-use -- Every session request receives the same mutable page fixture.
 				const page = {
 					currentUrl: 'about:blank',
-					/** Current page address.
+					/**
+					 * Current page address.
 					 * @return The current address.
 					 */
 					url() {
 						return this.currentUrl;
 					},
-					/** Navigates the stub to a requested curriculum URL.
+					/**
+					 * Navigates the stub to a requested curriculum URL.
 					 * @param url Destination page address.
 					 */
 					async goto(url) {
@@ -197,13 +214,15 @@ test('syllabus download fails clearly and closes its session when authentication
 					// hygiene-ignore single-use -- The context retains one mutable page across navigation calls.
 					const page = {
 						currentUrl: 'about:blank',
-						/** Current page address.
+						/**
+						 * Current page address.
 						 * @return The current address.
 						 */
 						url() {
 							return this.currentUrl;
 						},
-						/** Navigates the stub to the sign-in page.
+						/**
+						 * Navigates the stub to the sign-in page.
 						 * @param url Destination page address.
 						 */
 						async goto() {

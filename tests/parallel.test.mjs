@@ -1,3 +1,13 @@
+/**
+ * tests/parallel.test.mjs
+ * Checks bounded workflow scheduling and cancellation.
+ */
+
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
 import assert from 'node:assert/strict';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
@@ -10,6 +20,10 @@ import { URL } from 'node:url';
 import { acquireWorkflowSlot, resolveWorkerCount, runQueued } from '../dist/workflows/parallel.js';
 
 // Confirms worker-count overrides keep their documented precedence and validation.
+/*//////////////////////////////////////////////////
+TESTS
+//////////////////////////////////////////////////*/
+
 test('worker count resolves CLI, domain, environment, and fallback values', () => {
 	assert.equal(resolveWorkerCount(3, 'courses', { argv: ['node', 'script', '--workers=2'], env: { PW_COURSES_WORKERS: '4' } }), 2);
 	assert.equal(resolveWorkerCount(3, 'courses', { argv: ['node', 'script', '--workers', '5'], env: { PW_COURSES_WORKERS: '4' } }), 5);
@@ -79,7 +93,8 @@ test('workflow slots serialize acquisitions across processes', async () => {
 			await release();
 		}
 	`;
-	/** Starts a child process that acquires the shared workflow slot.
+	/**
+	 * Starts a child process that acquires the shared workflow slot.
 	 * @param id Label written to the process event log.
 	 * @returns A promise that settles when the child process exits successfully.
 	 */
@@ -95,8 +110,8 @@ test('workflow slots serialize acquisitions across processes', async () => {
 	try {
 		await Promise.all([runWorker('first'), runWorker('second')]);
 		const a = new Set();
-		for (const event of (await readFile(eventPath, 'utf8')).trim().split('\n')) {
-			const [op, id] = [event[0], event.slice(1)];
+		for (const e of (await readFile(eventPath, 'utf8')).trim().split('\n')) {
+			const [op, id] = [e[0], e.slice(1)];
 			if (op === '+') {
 				assert.equal(a.size, 0, 'a second process entered while the workflow slot was occupied');
 				a.add(id);

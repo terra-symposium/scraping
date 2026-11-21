@@ -1,3 +1,13 @@
+/**
+ * tests/browser.test.mjs
+ * Exercises browser authentication and session cleanup.
+ */
+
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
 import assert from 'node:assert/strict';
 import { access, mkdtemp, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import os from 'node:os';
@@ -6,6 +16,10 @@ import process from 'node:process';
 import test from 'node:test';
 import { chromium } from 'playwright';
 import { authenticateWorkflow } from '../dist/workflows/browser.js';
+
+/*//////////////////////////////////////////////////
+TESTS
+//////////////////////////////////////////////////*/
 
 test('interactive authentication saves state and returns in the requested browser mode', async () => {
 	const root = await mkdtemp(path.join(os.tmpdir(), 'browser-auth-'));

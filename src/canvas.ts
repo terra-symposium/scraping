@@ -22,19 +22,33 @@ import type { CollectedItem } from './collection.js';
 CONFIG
 //////////////////////////////////////////////////*/
 
-/** One file, page, or external link discovered in a Canvas module group. */
+/**
+ * One file, page, or external link discovered in a Canvas module group.
+ */
 export type CanvasItem = { title: string; url: string; type: 'file' | 'page' | 'link' | 'restricted'; parentSourceId?: string };
-/** A Canvas course with its display title and canonical course URL. */
+/**
+ * A Canvas course with its display title and canonical course URL.
+ */
 export type CanvasCourse = { title: string; url: string };
-/** A Canvas course module and the resources listed inside it. */
+/**
+ * A Canvas course module and the resources listed inside it.
+ */
 export type CanvasGroup = { title: string; items: CanvasItem[] };
-/** A locally saved Canvas file with its optional sanitized source URL. */
+/**
+ * A locally saved Canvas file with its optional sanitized source URL.
+ */
 export type CanvasFile = { path: string; name: string; sourceUrl?: string };
-/** Captured files, text, links, and per-item errors from one module group. */
+/**
+ * Captured files, text, links, and per-item errors from one module group.
+ */
 export type ExportedGroup = { course: CanvasCourse; title: string; files: CanvasFile[]; textPath: string; links: string[]; text: string; errors: string[]; items: CollectedItem[] };
-/** Complete local Canvas export manifest with course and module summaries. */
+/**
+ * Complete local Canvas export manifest with course and module summaries.
+ */
 export type CanvasExportManifest = { source: string; mode: 'download'; courses: { title: string; url: string; groups: string[] }[]; groups: ExportedGroup[] };
-/** Browser, course-selection, output, and logging options for a Canvas export. */
+/**
+ * Browser, course-selection, output, and logging options for a Canvas export.
+ */
 export type CanvasScrapeOptions = {
 	canvasUrl: string;
 	output?: string;
@@ -43,13 +57,19 @@ export type CanvasScrapeOptions = {
 	headed?: boolean;
 	interactive?: boolean;
 	includeAllCourses?: boolean;
-	/** Optional factory for consumer-specific browser sessions. */
+	/**
+	 * Optional factory for consumer-specific browser sessions.
+	 */
 	createSession?: (options: WorkflowSessionFactoryOptions) => Promise<WorkflowBrowserSession>;
 	log?: (message: string, failure?: boolean) => void;
 };
-/** Result returned by a Canvas export after writing its manifest and log. */
+/**
+ * Result returned by a Canvas export after writing its manifest and log.
+ */
 export type CanvasScrapeResult = { output: string; manifest: CanvasExportManifest; logs: string[] };
-/** Authenticated page, request, course, and output inputs for one course scrape. */
+/**
+ * Authenticated page, request, course, and output inputs for one course scrape.
+ */
 export type ScrapeCanvasCourseOptions = {
 	page: Page;
 	request: APIRequestContext;
@@ -59,9 +79,13 @@ export type ScrapeCanvasCourseOptions = {
 	log?: (message: string, failure?: boolean) => void;
 };
 
-/** Module heading and raw linked resources extracted from Canvas's DOM. */
+/**
+ * Module heading and raw linked resources extracted from Canvas's DOM.
+ */
 type RawCanvasGroup = { title: string; items: { title: string; url: string; label: string; restricted?: boolean }[] };
-/** Visible anchor title and absolute URL read from a Canvas page. */
+/**
+ * Visible anchor title and absolute URL read from a Canvas page.
+ */
 type RawCanvasLink = { title: string; url: string };
 const TEXT_EXTS = new Set([
 	'.asm',

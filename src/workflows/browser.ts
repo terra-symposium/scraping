@@ -19,73 +19,134 @@ import type { Browser, BrowserContext } from 'playwright';
 CONFIG
 //////////////////////////////////////////////////*/
 
-/** Options for launching a workflow browser session. */
+/**
+ * Options for launching a workflow browser session.
+ */
 export type WorkflowBrowserOptions = {
-	/** Whether to show the Chromium window. Defaults to false. */
+	/**
+	 * Whether to show the Chromium window. Defaults to false.
+	 */
 	headed?: boolean;
-	/** Optional Playwright storage-state file to load. */
+	/**
+	 * Optional Playwright storage-state file to load.
+	 */
 	storageStatePath?: string;
-	/** Optional persistent Chromium profile directory. */
+	/**
+	 * Optional persistent Chromium profile directory.
+	 */
 	userDataDir?: string;
-	/** Optional browser channel, such as `chrome`. */
+	/**
+	 * Optional browser channel, such as `chrome`.
+	 */
 	channel?: string;
-	/** Optional Chromium executable path. */
+	/**
+	 * Optional Chromium executable path.
+	 */
 	executablePath?: string;
-	/** Additional Chromium command-line arguments. */
+	/**
+	 * Additional Chromium command-line arguments.
+	 */
 	args?: string[];
-	/** Whether download events are accepted. Defaults to true. */
+	/**
+	 * Whether download events are accepted. Defaults to true.
+	 */
 	acceptDownloads?: boolean;
 };
-/** Browser resources owned by one workflow run. */
+/**
+ * Browser resources owned by one workflow run.
+ */
 export type WorkflowBrowserSession = {
-	/** Chromium browser process. */
+	/**
+	 * Chromium browser process.
+	 */
 	browser: Browser;
-	/** Isolated Playwright browser context. */
+	/**
+	 * Isolated Playwright browser context.
+	 */
 	context: BrowserContext;
-	/** Closes this browser context and its owned process once. */
+	/**
+	 * Closes this browser context and its owned process once.
+	 */
 	close: () => Promise<void>;
 };
-/** Callback options for a consumer-provided browser session factory. */
+/**
+ * Callback options for a consumer-provided browser session factory.
+ */
 export type WorkflowSessionFactoryOptions = {
-	/** Whether the created browser window should be visible. */
+	/**
+	 * Whether the created browser window should be visible.
+	 */
 	headed: boolean;
-	/** The storage-state path used by the workflow. */
+	/**
+	 * The storage-state path used by the workflow.
+	 */
 	storageStatePath: string;
 };
-/** Options for a workflow that validates and reuses authenticated browser state. */
+/**
+ * Options for a workflow that validates and reuses authenticated browser state.
+ */
 export type AuthenticateWorkflowOptions<T> = {
-	/** Stable application name used to choose the default state-file path. */
+	/**
+	 * Stable application name used to choose the default state-file path.
+	 */
 	sessionName: string;
-	/** Optional explicit Playwright storage-state path. */
+	/**
+	 * Optional explicit Playwright storage-state path.
+	 */
 	storageStatePath?: string;
-	/** Whether the returned browser should remain visible. Defaults to false. */
+	/**
+	 * Whether the returned browser should remain visible. Defaults to false.
+	 */
 	headed?: boolean;
-	/** Whether a visible sign-in session may be opened when saved state is invalid. */
+	/**
+	 * Whether a visible sign-in session may be opened when saved state is invalid.
+	 */
 	interactive?: boolean;
-	/** Maximum time allowed for an interactive sign-in, in milliseconds. */
+	/**
+	 * Maximum time allowed for an interactive sign-in, in milliseconds.
+	 */
 	timeoutMs?: number;
-	/** Optional callback that creates a browser session with app-specific settings. */
+	/**
+	 * Optional callback that creates a browser session with app-specific settings.
+	 */
 	createSession?: (options: WorkflowSessionFactoryOptions) => Promise<WorkflowBrowserSession>;
-	/** Opens the workflow's pages or other state in a browser context. */
+	/**
+	 * Opens the workflow's pages or other state in a browser context.
+	 */
 	open: (context: BrowserContext) => Promise<T>;
-	/** Returns true after the app-specific authenticated state is ready. */
+	/**
+	 * Returns true after the app-specific authenticated state is ready.
+	 */
 	isReady: (value: T) => Promise<boolean>;
-	/** Optional callback for a failed saved-state or post-login check. */
+	/**
+	 * Optional callback for a failed saved-state or post-login check.
+	 */
 	captureFailure?: (value: T, reason: string) => Promise<void>;
-	/** Optional callback called when the user must finish sign-in in a visible browser. */
+	/**
+	 * Optional callback called when the user must finish sign-in in a visible browser.
+	 */
 	onInteractiveStart?: () => void | Promise<void>;
-	/** Error message for a non-interactive run with invalid saved state. */
+	/**
+	 * Error message for a non-interactive run with invalid saved state.
+	 */
 	authenticationRequiredMessage?: string;
 };
-/** A workflow session with app-specific pages or state attached. */
+/**
+ * A workflow session with app-specific pages or state attached.
+ */
 export type AuthenticatedWorkflowSession<T> = WorkflowBrowserSession & {
-	/** The pages or value opened by the workflow. */
+	/**
+	 * The pages or value opened by the workflow.
+	 */
 	value: T;
-	/** The absolute Playwright storage-state path. */
+	/**
+	 * The absolute Playwright storage-state path.
+	 */
 	storageStatePath: string;
 };
 
-/** Resolves cleanup failures to `undefined` so best-effort resource cleanup can continue.
+/**
+ * Resolves cleanup failures to `undefined` so best-effort resource cleanup can continue.
  *
  * @return `undefined` so the original workflow result or error remains authoritative.
  */
@@ -211,7 +272,8 @@ export async function withWorkflowSession<T>(options: WorkflowBrowserOptions, ru
 	}
 }
 
-/** Persists browser login state with private permissions on its directory and file.
+/**
+ * Persists browser login state with private permissions on its directory and file.
  *
  * @param context Browser context whose authenticated state is saved.
  * @param storageStatePath Absolute destination for the Playwright state file.
@@ -238,7 +300,8 @@ export async function authenticateWorkflow<T>(options: AuthenticateWorkflowOptio
 	let session: WorkflowBrowserSession | undefined;
 	let value!: T;
 
-	/** Opens the consumer's app state in a new browser session using the selected headed mode.
+	/**
+	 * Opens the consumer's app state in a new browser session using the selected headed mode.
 	 * @param headed Whether Chromium should open visibly.
 	 */
 	async function open(headed: boolean): Promise<void> {
@@ -248,14 +311,16 @@ export async function authenticateWorkflow<T>(options: AuthenticateWorkflowOptio
 		value = await options.open(session.context);
 	}
 
-	/** Captures the current app state when a saved or newly signed-in session fails validation.
+	/**
+	 * Captures the current app state when a saved or newly signed-in session fails validation.
 	 * @param reason Explanation for the failed readiness check.
 	 */
 	async function captureFailure(reason: string): Promise<void> {
 		if (options.captureFailure) await options.captureFailure(value, reason);
 	}
 
-	/** Checks whether the current app-specific value represents an authenticated session.
+	/**
+	 * Checks whether the current app-specific value represents an authenticated session.
 	 * @returns Whether the app-specific value is ready.
 	 */
 	async function ready(): Promise<boolean> {

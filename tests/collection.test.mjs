@@ -1,9 +1,23 @@
+/**
+ * tests/collection.test.mjs
+ * Checks collected source provenance and completeness.
+ */
+
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { checkCollection, safeSourceUrl } from '../dist/collection.js';
+
+/*//////////////////////////////////////////////////
+TESTS
+//////////////////////////////////////////////////*/
 
 test('source provenance strips secrets and rejects non-web URLs', () => {
 	assert.equal(safeSourceUrl('https://user:password@example.edu/page?token=secret#part'), 'https://example.edu/page');

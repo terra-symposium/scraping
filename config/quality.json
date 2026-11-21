@@ -1,6 +1,5 @@
 {
 	"$schema": "./config/node_modules/@terra-symposium/hygiene/quality.schema.json",
-	"root": ".",
 	"configRoot": "config",
 	"sourceRoots": ["."],
 	"languageProfiles": ["c", "java", "python"],
@@ -45,7 +44,10 @@
 		"required": {
 			"types": true,
 			"functions": true,
-			"exportedFunctions": true
+			"exportedFunctions": true,
+			"importSection": true,
+			"fileHeader": true,
+			"multilineTsdoc": true
 		},
 		"commandRoots": ["."]
 	},
@@ -80,7 +82,7 @@
 		"extensions": [".cjs", ".cts", ".js", ".jsx", ".mjs", ".mts", ".ts", ".tsx"]
 	},
 	"security": {
-		"runtimeRoots": ["src/workflows/parallel.ts"]
+		"runtimeRoots": ["src/workflows/parallel.ts", "scripts/quality-runner.mjs"]
 	},
 	"protectedIdentifiers": ["directory"],
 	"github": {

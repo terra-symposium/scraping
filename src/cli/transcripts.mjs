@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+/**
+ * src/cli/transcripts.mjs
+ */
 /*
  * Inventory locally collected Canvas/Zoom/Kaltura transcripts by course week.
  * This helper never opens a browser, fetches remote content, or changes Docs.
@@ -13,17 +16,14 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 
-/*//////////////////////////////////////////////////
-TYPES
-//////////////////////////////////////////////////*/
-
-/** Metadata allowlist supported by one explicit transcript source mapping.
+/**
+ * Metadata allowlist supported by one explicit transcript source mapping.
  * @typedef {Record<string, unknown> & {week?: number|string, recordingUrl?: string, meetingTitle?: string, meetingDate?: string, platform?: string, captureMethod?: string, transcriptOrigin?: string, language?: string, visibleVerification?: string, captionStatus?: string, expectedIds?: string[]}} MappingRecord
- */
-/** One expected transcript source used by the coverage report.
+ * One expected transcript source used by the coverage report.
  * @typedef {{id: string, week: number|string, title?: string, required?: boolean, matchAny?: string[], expectedIds?: string[]}} ExpectedMeeting
  */
-/** One local transcript and the provenance used to classify it.
+/**
+ * One local transcript and the provenance used to classify it.
  * @typedef {{week: number|undefined, weekMethod: string, inferredWeeks: number[], name: string, source: string, extension: string, sha256: string, bytes: number, text: string, metadata: Record<string, unknown>, provenanceStatus: string, mappingMatch: string}} TranscriptEntry
  */
 
@@ -57,15 +57,18 @@ const inputRoot = path.resolve(inputArg || '.');
 const outputRoot = path.resolve(outputArg || '.');
 const mappingArg = getOptionValue('mapping');
 const expectedArg = getOptionValue('expected');
-/** Transcript records collected from valid source files.
+/**
+ * Transcript records collected from valid source files.
  * @type {TranscriptEntry[]} - Sorted before writing the final week manifest.
  */
 const entries = [];
-/** Source paths that could not be assigned a trusted week or mapping.
+/**
+ * Source paths that could not be assigned a trusted week or mapping.
  * @type {Record<string, unknown>[]} - Includes ambiguity and range diagnostics.
  */
 const unmatchedSrcs = [];
-/** Read failures encountered while processing local transcript files.
+/**
+ * Read failures encountered while processing local transcript files.
  * @type {{source: string, message: string}[]} - Stores source-relative paths and safe messages.
  */
 const readErrs = [];
@@ -73,18 +76,21 @@ const mappingInput = await readJson(mappingArg, 'source mapping');
 const rawMapping = mappingInput.value;
 const rawMappingRecord = isRecord(rawMapping) ? rawMapping : undefined;
 const mappingObjectValue = (rawMappingRecord && rawMappingRecord.sources) || rawMapping || {};
-/** Explicit path-to-metadata mappings loaded from the source map.
+/**
+ * Explicit path-to-metadata mappings loaded from the source map.
  * @type {Map<string, MappingRecord>} - Keys are normalized relative paths.
  */
 const mappingByPath = new Map();
-/** Basename mappings used only when a filename is unique.
+/**
+ * Basename mappings used only when a filename is unique.
  * @type {Map<string, MappingRecord[]>} - Multiple entries stay ambiguous for review.
  */
 const mappingByBaseName = new Map();
 const expectedInput = await readJson(expectedArg, 'expected-meetings');
 const expectedMeetings = /** @type {unknown[]} */ ((isRecord(expectedInput.value) && expectedInput.value.meetings) || []);
 if (!Array.isArray(expectedMeetings) || !expectedMeetings.every(isExpectedMeeting)) throw new Error('Expected-meetings JSON must contain valid meeting records.');
-/** Transcript entries grouped by their resolved week number.
+/**
+ * Transcript entries grouped by their resolved week number.
  * @type {Map<number, TranscriptEntry[]>} - Unresolved sources remain in diagnostics only.
  */
 const grouped = new Map();
@@ -439,7 +445,8 @@ while (pendingDirs.length) {
 		continue;
 	}
 
-	/** Bytes read from one candidate transcript file.
+	/**
+	 * Bytes read from one candidate transcript file.
 	 * @type {Buffer} - Kept only long enough to hash and decode the local file.
 	 */
 	let bytes;
@@ -450,7 +457,8 @@ while (pendingDirs.length) {
 		unmatchedSrcs.push({ source: src, reason: 'read-error' });
 		continue;
 	}
-	/** Approved provenance fields copied to a report entry.
+	/**
+	 * Approved provenance fields copied to a report entry.
 	 * @type {Record<string, unknown>} - Contains only values from the explicit metadata allowlist.
 	 */
 	const metadata = {};

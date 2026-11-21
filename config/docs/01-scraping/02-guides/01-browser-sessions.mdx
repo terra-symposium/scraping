@@ -39,15 +39,21 @@ The browser helpers centralize Chromium launch, Playwright storage-state reuse, 
 
 Set `headed: false` and leave `interactive` false (the default) to reuse saved state without opening a window. If the app is not ready, the helper closes the session and throws.
 
-||| |||[Headless with sign-in recovery]
+|||
+
+|||[Headless with sign-in recovery]
 
 Set `headed: false` and `interactive: true`. The helper tries headlessly first. If readiness fails, it opens a visible browser for sign-in, saves state, closes that browser, then launches and verifies a fresh headless session.
 
-||| |||[Visible session]
+|||
+
+|||[Visible session]
 
 Set `headed: true`. `interactive` defaults to true, so a visible session can wait for sign-in and remains open when returned. Set `interactive: false` to require existing state; an unreadable session then closes and throws.
 
-||| The default interactive-authentication timeout is 15 minutes. Readiness is polled at intervals of up to one second. `onInteractiveStart` runs just before the user must finish sign-in.
+|||
+
+The default interactive-authentication timeout is 15 minutes. Readiness is polled at intervals of up to one second. `onInteractiveStart` runs just before the user must finish sign-in.
 
 ## Create a temporary browser session
 
@@ -126,6 +132,8 @@ When `storageStatePath` is omitted, the helper sanitizes `sessionName` and uses 
 - Other platforms: `~/.config/terra-symposium/workflows/session-name/storage-state.json`
 
 Supply an explicit `storageStatePath` when an application manages state elsewhere.
+
+===
 
 ## Custom browser factories
 

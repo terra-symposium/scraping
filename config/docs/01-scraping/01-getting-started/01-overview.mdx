@@ -114,11 +114,15 @@ Canvas and syllabus commands use Chromium. Transcript inventory reads .txt, .vtt
 
 Website can reuse browser, authentication, and concurrency helpers. It may supply createSession when it needs its existing Chrome channel or persistent-profile selection. Gemini and Sanity selectors, account checks, screenshots, AI generation, and publishing remain Website-owned.
 
-||| |||[Uni Notes]
+|||
+
+|||[Uni Notes]
 
 Uni Notes can use Canvas exports, downloaded syllabuses, and transcript inventory as local source material. It owns Markdown organization, content review, and deciding when material is added to the notes tree.
 
-||| Both consumers own service-specific account selection and selectors outside the shared Canvas and syllabus adapters. The package does not publish to Terra Docs or Sanity and does not decide whether an export becomes a note.
+|||
+
+Both consumers own service-specific account selection and selectors outside the shared Canvas and syllabus adapters. The package does not publish to Terra Docs or Sanity and does not decide whether an export becomes a note.
 
 ## What the package stores
 
