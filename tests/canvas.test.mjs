@@ -97,9 +97,9 @@ function canvasPageFixture(options = {}) {
 			},
 		},
 		/**
- * Current URL of the fixture page.
- *
- * @return The page URL.
+		 * Current URL of the fixture page.
+		 *
+		 * @return The page URL.
 		 */
 		get url() {
 			return pageUrl;

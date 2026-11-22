@@ -74,8 +74,8 @@ if (!repoPackage) {
 }
 const cacheRoot = join(root, 'dist/cache/quality-runner');
 mkdirSync(cacheRoot, { recursive: true });
-const tempDir = mkdtempSync(join(cacheRoot, 'run-'));
-const configPath = join(tempDir, 'quality.json');
+const tmpDir = mkdtempSync(join(cacheRoot, 'run-'));
+const configPath = join(tmpDir, 'quality.json');
 writeFileSync(configPath, await formatQualityConfig(JSON.stringify(raw), { parser: 'json' }));
 try {
 	if (args[0] === 'quality' && !args.includes('--warn') && !args.includes('--fix') && !args.includes('--safe-fix')) args.push('--fix');
@@ -83,5 +83,5 @@ try {
 	if (override) await (await import(pathToFileURL(override).href)).runQualityFromCfg(configPath, args);
 	else await installedRunQualityFromCfg(configPath, args);
 } finally {
-	rmSync(tempDir, { recursive: true, force: true });
+	rmSync(tmpDir, { recursive: true, force: true });
 }

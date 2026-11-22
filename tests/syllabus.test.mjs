@@ -23,22 +23,22 @@ TESTS
 //////////////////////////////////////////////////*/
 
 test('syllabus archive normalization ignores support documents and selects deterministically', async () => {
-	const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'scraping-syllabus-test-'));
+	const tmpRoot = await mkdtemp(path.join(os.tmpdir(), 'scraping-syllabus-test-'));
 	try {
-		const archivePath = path.join(tempRoot, 'curriculum.zip');
+		const archivePath = path.join(tmpRoot, 'curriculum.zip');
 		const archive = new AdmZip();
 		archive.addFile('syllabus support/Support.docx', Buffer.from('support document'));
 		archive.addFile('z-unit.docx', Buffer.from('later document'));
 		archive.addFile('a-unit.docx', Buffer.from('selected document'));
 		archive.writeZip(archivePath);
 
-		const result = await normalizeSyllabusDocument(archivePath, { outputDirectory: path.join(tempRoot, 'output') });
+		const result = await normalizeSyllabusDocument(archivePath, { outputDirectory: path.join(tmpRoot, 'output') });
 
 		assert.equal(result.fileName, 'a-unit.docx');
 		assert.equal(result.archiveEntry, 'a-unit.docx');
 		assert.equal(await readFile(result.filePath, 'utf8'), 'selected document');
 	} finally {
-		await rm(tempRoot, { recursive: true, force: true });
+		await rm(tmpRoot, { recursive: true, force: true });
 	}
 });
 
@@ -115,12 +115,12 @@ test('NSW syllabus preparation fills the picker and selects every enabled checkb
 
 test('syllabus readiness rejects login routes and sign-in pages', async () => {
 	/**
- * Creates a page stub with a URL and visible body text.
- *
- * @param url Page address returned by the stub.
- * @param text Visible body text returned by the stub.
- *
- * @returns A minimal page implementation for readiness checks.
+	 * Creates a page stub with a URL and visible body text.
+	 *
+	 * @param url Page address returned by the stub.
+	 * @param text Visible body text returned by the stub.
+	 *
+	 * @returns A minimal page implementation for readiness checks.
 	 */
 	const page = (url, text) => ({ url: () => url, locator: () => ({ isVisible: async () => true, innerText: async () => text }) });
 	assert.equal(await isAustralianSyllabusPageReady(page('https://example.edu/login', 'Public syllabus')), false);
@@ -150,17 +150,17 @@ test('syllabus download completes interactive authentication and closes each ses
 				const page = {
 					currentUrl: 'about:blank',
 					/**
- * Current page address.
- *
- * @return The current address.
+					 * Current page address.
+					 *
+					 * @return The current address.
 					 */
 					url() {
 						return this.currentUrl;
 					},
 					/**
- * Navigates the stub to a requested curriculum URL.
- *
- * @param url Destination page address.
+					 * Navigates the stub to a requested curriculum URL.
+					 *
+					 * @param url Destination page address.
 					 */
 					async goto(url) {
 						this.currentUrl = !headed && !storedAuthentication ? 'https://curriculum.example/login' : url;
@@ -219,17 +219,17 @@ test('syllabus download fails clearly and closes its session when authentication
 					const page = {
 						currentUrl: 'about:blank',
 						/**
- * Current page address.
- *
- * @return The current address.
+						 * Current page address.
+						 *
+						 * @return The current address.
 						 */
 						url() {
 							return this.currentUrl;
 						},
 						/**
- * Navigates the stub to the sign-in page.
- *
- * @param url Destination page address.
+						 * Navigates the stub to the sign-in page.
+						 *
+						 * @param url Destination page address.
 						 */
 						async goto() {
 							this.currentUrl = 'https://curriculum.example/login';

@@ -387,11 +387,11 @@ export async function discoverCanvasCourses(page: Page, initialUrl: string, opti
 	await page.waitForLoadState('networkidle').catch(ignoreCanvasWaitFailure);
 	await page.locator('.ic-DashboardCard__link, .ic-DashboardCard a[href], a[href*="/courses/"]').first().waitFor({ state: 'attached', timeout: 15_000 }).catch(ignoreCanvasWaitFailure);
 	/**
- * Reads course links matching one selector from the current page.
- *
- * @param selector - CSS selector for dashboard or course links.
- *
- * @return Canonical course records extracted from those links.
+	 * Reads course links matching one selector from the current page.
+	 *
+	 * @param selector - CSS selector for dashboard or course links.
+	 *
+	 * @return Canonical course records extracted from those links.
 	 */
 	async function collectCourses(selector: string): Promise<CanvasCourse[]> {
 		// Extracts canonical course links from Canvas elements in a browser page.

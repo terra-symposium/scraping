@@ -94,11 +94,11 @@ test('workflow slots serialize acquisitions across processes', async () => {
 		}
 	`;
 	/**
- * Starts a child process that acquires the shared workflow slot.
- *
- * @param id Label written to the process event log.
- *
- * @returns A promise that settles when the child process exits successfully.
+	 * Starts a child process that acquires the shared workflow slot.
+	 *
+	 * @param id Label written to the process event log.
+	 *
+	 * @returns A promise that settles when the child process exits successfully.
 	 */
 	const runWorker = id =>
 		new Promise((resolve, reject) => {
