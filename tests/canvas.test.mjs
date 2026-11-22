@@ -40,7 +40,9 @@ HELPERS
 
 /**
  * Builds an anchor-like Canvas DOM fixture used by serialized browser callbacks.
+ *
  * @param o - Anchor URL, optional title and text, module-row label, and dashboard-card title.
+ *
  * @returns A minimal DOM-like anchor consumed by Canvas extraction callbacks.
  */
 function canvasAnchor(o) {
@@ -56,7 +58,9 @@ function canvasAnchor(o) {
 
 /**
  * Creates a Playwright page fixture for discovery, readiness, reading, and export tests.
+ *
  * @param options - Initial URL, dashboard and course anchors, module nodes, and dashboard readiness.
+ *
  * @returns The stub page and a getter for its current URL.
  */
 function canvasPageFixture(options = {}) {
@@ -93,8 +97,9 @@ function canvasPageFixture(options = {}) {
 			},
 		},
 		/**
-		 * Current URL of the fixture page.
-		 * @return The page URL.
+ * Current URL of the fixture page.
+ *
+ * @return The page URL.
 		 */
 		get url() {
 			return pageUrl;

@@ -301,8 +301,9 @@ export async function authenticateWorkflow<T>(options: AuthenticateWorkflowOptio
 	let value!: T;
 
 	/**
-	 * Opens the consumer's app state in a new browser session using the selected headed mode.
-	 * @param headed Whether Chromium should open visibly.
+ * Opens the consumer's app state in a new browser session using the selected headed mode.
+ *
+ * @param headed Whether Chromium should open visibly.
 	 */
 	async function open(headed: boolean): Promise<void> {
 		session = await (
@@ -312,16 +313,18 @@ export async function authenticateWorkflow<T>(options: AuthenticateWorkflowOptio
 	}
 
 	/**
-	 * Captures the current app state when a saved or newly signed-in session fails validation.
-	 * @param reason Explanation for the failed readiness check.
+ * Captures the current app state when a saved or newly signed-in session fails validation.
+ *
+ * @param reason Explanation for the failed readiness check.
 	 */
 	async function captureFailure(reason: string): Promise<void> {
 		if (options.captureFailure) await options.captureFailure(value, reason);
 	}
 
 	/**
-	 * Checks whether the current app-specific value represents an authenticated session.
-	 * @returns Whether the app-specific value is ready.
+ * Checks whether the current app-specific value represents an authenticated session.
+ *
+ * @returns Whether the app-specific value is ready.
 	 */
 	async function ready(): Promise<boolean> {
 		return options.isReady(value);

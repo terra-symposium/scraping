@@ -261,6 +261,7 @@ export function canvasCourseUrl(value: string): string | undefined {
  * Removes credential and query data from URLs embedded in progress and error messages.
  *
  * @param value - Message text that may contain Canvas URLs.
+ *
  * @return Message text with each detected URL sanitized.
  */
 function sMsg(value: unknown): string {
@@ -271,6 +272,7 @@ function sMsg(value: unknown): string {
  * Produces a stable filesystem component from a course, group, or resource title.
  *
  * @param value - Canvas display name.
+ *
  * @return Lowercase ASCII name with a safe fallback.
  */
 function sName(value: string): string {
@@ -385,10 +387,11 @@ export async function discoverCanvasCourses(page: Page, initialUrl: string, opti
 	await page.waitForLoadState('networkidle').catch(ignoreCanvasWaitFailure);
 	await page.locator('.ic-DashboardCard__link, .ic-DashboardCard a[href], a[href*="/courses/"]').first().waitFor({ state: 'attached', timeout: 15_000 }).catch(ignoreCanvasWaitFailure);
 	/**
-	 * Reads course links matching one selector from the current page.
-	 *
-	 * @param selector - CSS selector for dashboard or course links.
-	 * @return Canonical course records extracted from those links.
+ * Reads course links matching one selector from the current page.
+ *
+ * @param selector - CSS selector for dashboard or course links.
+ *
+ * @return Canonical course records extracted from those links.
 	 */
 	async function collectCourses(selector: string): Promise<CanvasCourse[]> {
 		// Extracts canonical course links from Canvas elements in a browser page.
@@ -560,8 +563,10 @@ export async function readCanvasPage(page: Page, item: CanvasItem): Promise<{ te
 
 /**
  * Detect Canvas pages that expose only their heading and module navigation.
+ *
  * @param text - Captured page text, including its provenance header.
  * @param title - Module item's visible title.
+ *
  * @return Whether the page contains source material beyond its shell.
  */
 export function hasCanvasPageContent(text: string, title: string): boolean {

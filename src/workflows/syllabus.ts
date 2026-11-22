@@ -225,6 +225,7 @@ export async function prepareAustralianSyllabusPage(page: Page, state: Australia
  * Sanitizes an operating-system filename using only printable, portable characters.
  *
  * @param value - Suggested filename from a curriculum download.
+ *
  * @return Safe filename with a fallback when the suggestion becomes empty.
  */
 function sFileName(value: string): string {
@@ -246,6 +247,7 @@ function sFileName(value: string): string {
  *
  * @param l - First archive entry.
  * @param r - Second archive entry.
+ *
  * @return Locale comparison result for the entry names.
  */
 function compArchiveEntryNames(l: { entryName: string }, r: { entryName: string }): number {

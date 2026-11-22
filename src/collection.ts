@@ -24,7 +24,9 @@ export type CollectedItem = {
 
 /**
  * Strip URL secrets and reject non-web schemes before provenance is stored.
+ *
  * @param value - Source URL to sanitize.
+ *
  * @return URL without credentials, query parameters, or fragment.
  */
 export function safeSourceUrl(value: string): string {
@@ -39,7 +41,9 @@ export function safeSourceUrl(value: string): string {
 
 /**
  * Validate a partial or complete capture before a consumer imports it.
+ *
  * @param items - Captured inventory to verify.
+ *
  * @return Validation errors; an empty array means the inventory is valid.
  */
 export async function checkCollection(items: CollectedItem[]): Promise<string[]> {

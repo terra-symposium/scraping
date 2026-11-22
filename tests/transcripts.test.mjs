@@ -25,6 +25,7 @@ HELPERS
  * Runs the inventory command against temporary local fixtures without launching a browser or making network requests.
  *
  * @param {string[]} args - Command-line arguments forwarded to the inventory script.
+ *
  * @return {import('node:child_process').SpawnSyncReturns<string>} Captured process output and exit status.
  */
 function runTranscriptInventory(args) {

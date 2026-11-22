@@ -40,6 +40,7 @@ if (args.includes('--help') || args.includes('-h')) {
  * Reads the value of a command-line option without consuming the process arguments.
  *
  * @param {string} name - Option name without its leading dashes.
+ *
  * @return {string|undefined} The first matching option value, if supplied.
  */
 function getOptionValue(name) {
@@ -130,6 +131,7 @@ function isRecord(value) {
  * Checks whether an expected-meeting record has the fields used by matching and reporting.
  *
  * @param {unknown} v - Candidate record parsed from the expected-meetings JSON.
+ *
  * @return {value is ExpectedMeeting} Whether the record satisfies the inventory contract.
  */
 function isExpectedMeeting(v) {
@@ -153,6 +155,7 @@ function isExpectedMeeting(v) {
  * Checks whether every member of a JSON value is a string.
  *
  * @param {unknown} value - Candidate array from parsed metadata.
+ *
  * @return {value is string[]} Whether the value is a string array.
  */
 function isStringArray(value) {
@@ -222,6 +225,7 @@ async function readJson(arg, label) {
  *
  * @param {number} l - First candidate week.
  * @param {number} r - Second candidate week.
+ *
  * @return {number} Negative, zero, or positive according to numeric order.
  */
 function compNums(l, r) {
@@ -233,6 +237,7 @@ function compNums(l, r) {
  *
  * @param {TranscriptEntry} l - First transcript entry.
  * @param {TranscriptEntry} r - Second transcript entry.
+ *
  * @return {number} Locale comparison result for the source paths.
  */
 function compSrcEntries(l, r) {
@@ -243,6 +248,7 @@ function compSrcEntries(l, r) {
  * Builds expected-meeting status by matching configured identifiers against collected transcripts.
  *
  * @param {unknown} rawMeeting - Validated expected-meeting object from configuration.
+ *
  * @return {object} Status and matched source details for the requested meeting.
  */
 function createExpectedMeetingReport(rawMeeting) {
@@ -272,6 +278,7 @@ function createExpectedMeetingReport(rawMeeting) {
  *
  * @param {TranscriptEntry} entry - Collected transcript candidate.
  * @param {ExpectedMeeting} meeting - Expected meeting to match.
+ *
  * @return {boolean} Whether any configured token occurs in any transcript identifier.
  */
 function entryMatchesMeeting(entry, meeting) {
@@ -300,6 +307,7 @@ function entryMatchesMeeting(entry, meeting) {
  * Converts a transcript entry into the source reference stored in expected-meeting reports.
  *
  * @param {TranscriptEntry} entry - Matched transcript candidate.
+ *
  * @return {{source: string, week: number|null, sha256: string}} Compact source provenance.
  */
 function toMatchedSrc(entry) {
@@ -310,6 +318,7 @@ function toMatchedSrc(entry) {
  * Selects report fields and names the transcript extension as its output format.
  *
  * @param {TranscriptEntry} entry - Collected transcript details.
+ *
  * @return {object} Public fields written into one week report.
  */
 function toReportFile(entry) {
@@ -331,6 +340,7 @@ function toReportFile(entry) {
  *
  * @param {TranscriptEntry[]} unique - Deduplicated transcript records for the week.
  * @param {number} week - Week number being written.
+ *
  * @return {string} Plain-text contents for the week file.
  */
 function renderWeekBody(unique, week) {
@@ -345,6 +355,7 @@ function renderWeekBody(unique, week) {
  * Formats a transcript and its approved provenance as one plain-text section.
  *
  * @param {TranscriptEntry} entry - Transcript contents and metadata.
+ *
  * @return {string} Transcript section with source, digest, week evidence, and provenance.
  */
 function renderTranscript(entry) {
@@ -364,6 +375,7 @@ function renderTranscript(entry) {
  *
  * @param {string} key - Metadata field name.
  * @param {unknown} value - Approved field value.
+ *
  * @return {string} Human-readable key-value line.
  */
 function fmtMetadataField(key, value) {
