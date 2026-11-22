@@ -199,8 +199,8 @@ export async function prepareAustralianSyllabusPage(page: Page, state: Australia
 	} catch {
 		current = undefined;
 	}
-	const target = new URL(src.url);
-	if (!current || current.origin !== target.origin || current.pathname !== target.pathname) await page.goto(src.url, { waitUntil: 'domcontentloaded' });
+	const tgt = new URL(src.url);
+	if (!current || current.origin !== tgt.origin || current.pathname !== tgt.pathname) await page.goto(src.url, { waitUntil: 'domcontentloaded' });
 	if (state !== 'NSW') return page;
 	const syllabusName = options.syllabusName || src.syllabusName || '';
 	if (!syllabusName) throw new Error('The NSW curriculum workflow requires a syllabus selection.');
