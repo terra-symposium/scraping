@@ -1,6 +1,7 @@
 ---
 name: canvas
-description: Collect authorized Canvas course materials and transcripts with source provenance.
+description: Collect authorized Canvas course materials and transcripts with
+  source provenance.
 metadata:
   related-files:
     - src/canvas.ts

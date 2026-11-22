@@ -1,6 +1,7 @@
 ---
 name: syllabus
-description: Collect and verify public curriculum source records for local scraping projects.
+description: Collect and verify public curriculum source records for local
+  scraping projects.
 metadata:
   related-files:
     - src/workflows/syllabus.ts

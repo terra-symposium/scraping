@@ -9,3 +9,6 @@ canvas-export/
 # Local generated caches and dependency links
 .astro
 /config/dist
+
+# Generated agent skills
+/.agents/skills/

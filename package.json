@@ -65,7 +65,9 @@
 		"syllabus:fetch": "node dist/cli/syllabus.js",
 		"quality": "node \"$(git rev-parse --show-toplevel)/scripts/quality-runner.mjs\" quality",
 		"quality:all": "node \"$(git rev-parse --show-toplevel)/scripts/quality-runner.mjs\" quality --all",
-		"verify": "pnpm run quality:all && pnpm run test"
+		"verify": "pnpm run quality:all && pnpm run test",
+		"skills:prepare": "terra-skills prepare",
+		"skills:check": "terra-skills check"
 	},
 	"dependencies": {
 		"adm-zip": "^0.6.1",
@@ -75,7 +77,8 @@
 		"@changesets/cli": "3.0.3",
 		"@types/node": "^24.0.0",
 		"husky": "9.1.7",
-		"typescript": "5.9.3"
+		"typescript": "5.9.3",
+		"@terra-symposium/skills": "0.1.2"
 	},
 	"publishConfig": {
 		"access": "public"

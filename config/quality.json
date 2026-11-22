@@ -1,8 +1,14 @@
 {
 	"$schema": "./config/node_modules/@terra-symposium/hygiene/quality.schema.json",
 	"configRoot": "config",
-	"sourceRoots": ["."],
-	"languageProfiles": ["c", "java", "python"],
+	"sourceRoots": [
+		"."
+	],
+	"languageProfiles": [
+		"c",
+		"java",
+		"python"
+	],
 	"extensions": [
 		".astro",
 		".c",
@@ -49,7 +55,9 @@
 			"fileHeader": true,
 			"multilineTsdoc": true
 		},
-		"commandRoots": ["."]
+		"commandRoots": [
+			"."
+		]
 	},
 	"enabledChecks": {
 		"document": true,
@@ -79,16 +87,35 @@
 		"github": true
 	},
 	"performancePatterns": {
-		"extensions": [".cjs", ".cts", ".js", ".jsx", ".mjs", ".mts", ".ts", ".tsx"]
+		"extensions": [
+			".cjs",
+			".cts",
+			".js",
+			".jsx",
+			".mjs",
+			".mts",
+			".ts",
+			".tsx"
+		]
 	},
 	"security": {
-		"runtimeRoots": ["src/workflows/parallel.ts", "scripts/quality-runner.mjs"]
+		"runtimeRoots": [
+			"src/workflows/parallel.ts",
+			"scripts/quality-runner.mjs"
+		]
 	},
-	"protectedIdentifiers": ["directory"],
+	"protectedIdentifiers": [
+		"directory"
+	],
 	"github": {
-		"repositories": ["Terra-Symposium/scraping"]
+		"repositories": [
+			"Terra-Symposium/scraping"
+		]
 	},
 	"autofix": {
 		"document": false
-	}
+	},
+	"skippedDirectories": [
+		".agents/skills"
+	]
 }
