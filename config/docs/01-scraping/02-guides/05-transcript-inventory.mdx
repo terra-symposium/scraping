@@ -1,6 +1,6 @@
 ---
 title: Transcript inventory
-description: Inventory local transcript and caption files with week coverage, duplicate detection, and provenance metadata.
+description: Inventory local transcript and caption files with week coverage, duplicate.
 ---
 
 The `canvas-transcripts` command organizes local transcript and caption files into weekly text files and a JSON coverage report. It never opens a browser, fetches remote content, modifies Canvas, or changes the input files.
@@ -100,18 +100,7 @@ Provenance is recorded only when platform and either captureMethod or transcript
 Use this optional file to report whether each known meeting has a matching transcript source:
 
 ```json
-{
-	"meetings": [
-		{
-			"id": "week-01-lecture",
-			"week": 1,
-			"title": "Week 1 lecture",
-			"required": true,
-			"matchAny": ["lecture one", "session 1"],
-			"expectedIds": ["week-01-lecture"]
-		}
-	]
-}
+{ "meetings": [{ "id": "week-01-lecture", "week": 1, "title": "Week 1 lecture", "required": true, "matchAny": ["lecture one", "session 1"], "expectedIds": ["week-01-lecture"] }] }
 ```
 
 Each meeting needs a non-empty id and a positive integer week. title and required are optional; required defaults to true. matchAny and expectedIds are optional arrays of strings.

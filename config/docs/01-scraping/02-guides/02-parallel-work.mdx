@@ -1,6 +1,6 @@
 ---
 title: Parallel work
-description: Resolve shared worker limits, run bounded queues, and coordinate concurrent processes.
+description: Resolve shared worker limits, run bounded queues, and coordinate concurrent.
 ---
 
 The package provides helpers for two scopes. `runQueued` limits concurrency inside one Node process. `acquireWorkflowSlot` coordinates a limit across separate processes. `resolveWorkerCount` gives commands and applications the same worker-count precedence.
@@ -46,10 +46,7 @@ const workers = resolveWorkerCount(4, 'canvas');
 Invalid values (including zero, negative, fractional, and unsafe integers) are ignored. An invalid fallback resolves to `1`. Pass `argv` and `env` for deterministic lookup independent of the current process:
 
 ```ts
-const workers = resolveWorkerCount(4, 'canvas', {
-	argv: ['node', 'export.mjs', '--headed'],
-	env: { PW_HEADED_WORKERS: '2', PW_WORKERS: '8' },
-});
+const workers = resolveWorkerCount(4, 'canvas', { argv: ['node', 'export.mjs', '--headed'], env: { PW_HEADED_WORKERS: '2', PW_WORKERS: '8' } });
 ```
 
 ## Run work in one process
@@ -75,10 +72,7 @@ const failures = await runQueued(courseUrls, resolveWorkerCount(4, 'canvas'), as
 ```ts
 import { acquireWorkflowSlot } from '@terra-symposium/scraping';
 
-const release = await acquireWorkflowSlot({
-	name: 'canvas-downloads',
-	size: 2,
-});
+const release = await acquireWorkflowSlot({ name: 'canvas-downloads', size: 2 });
 
 try {
 	await downloadBatch();

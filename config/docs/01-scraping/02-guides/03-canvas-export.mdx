@@ -58,12 +58,7 @@ Use `scrapeCanvas` for the complete workflow when the package should own authent
 ```ts
 import { scrapeCanvas } from '@terra-symposium/scraping/canvas';
 
-const result = await scrapeCanvas({
-	canvasUrl: 'https://canvas.example.edu/dashboard',
-	groupMatches: ['Week 1', 'Week 2'],
-	headed: true,
-	interactive: true,
-});
+const result = await scrapeCanvas({ canvasUrl: 'https://canvas.example.edu/dashboard', groupMatches: ['Week 1', 'Week 2'], headed: true, interactive: true });
 
 console.log(result.output, result.manifest);
 ```
@@ -114,13 +109,7 @@ try {
 	const courses = await discoverCanvasCourses(session.value, 'https://canvas.example.edu/dashboard');
 	const first = courses[0];
 	if (first) {
-		await scrapeCanvasCourse({
-			page: session.value,
-			request: session.context.request,
-			course: first,
-			output: '/tmp/canvas-export',
-			groupMatches: ['Week 1'],
-		});
+		await scrapeCanvasCourse({ page: session.value, request: session.context.request, course: first, output: '/tmp/canvas-export', groupMatches: ['Week 1'] });
 	}
 } finally {
 	await session.close();

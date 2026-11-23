@@ -1,6 +1,6 @@
 ---
 title: Australian syllabus acquisition
-description: Open configured Australian curriculum pages, download Word syllabuses, and normalize local documents.
+description: Open configured Australian curriculum pages, download Word syllabuses, and.
 ---
 
 The syllabus workflow downloads a Word file from one configured Australian state or territory curriculum page. It opens the public page, prepares its download controls, and saves the result locally. It does not convert the document or create notes.
@@ -66,11 +66,7 @@ The CLI supports `--state`, `--output`, `--file-name`, `--syllabus-name`, `--hea
 ```ts
 import { fetchAustralianSyllabus } from '@terra-symposium/scraping';
 
-const syllabus = await fetchAustralianSyllabus({
-	state: 'NSW',
-	headed: false,
-	outputDirectory: '/Users/you/Downloads/syllabuses',
-});
+const syllabus = await fetchAustralianSyllabus({ state: 'NSW', headed: false, outputDirectory: '/Users/you/Downloads/syllabuses' });
 
 console.log(syllabus.filePath);
 ```
@@ -90,9 +86,7 @@ Use `normalizeSyllabusDocument` to copy a local Word file or extract one Word fi
 ```ts
 import { normalizeSyllabusDocument } from '@terra-symposium/scraping';
 
-const normalized = await normalizeSyllabusDocument('/path/to/download.zip', {
-	outputDirectory: '/Users/you/Downloads/syllabuses',
-});
+const normalized = await normalizeSyllabusDocument('/path/to/download.zip', { outputDirectory: '/Users/you/Downloads/syllabuses' });
 ```
 
 | Input             | Result                                                                            |
