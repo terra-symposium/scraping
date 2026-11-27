@@ -1,6 +1,6 @@
 {
 	"name": "@terra-symposium/scraping",
-	"version": "0.3.0",
+	"version": "0.3.1",
 	"description": "Reusable browser, authentication, parallel-work, Canvas, syllabus, and transcript workflows",
 	"license": "Apache-2.0",
 	"repository": {

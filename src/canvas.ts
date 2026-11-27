@@ -289,6 +289,17 @@ function sName(value: string): string {
 }
 
 /**
+ * Produces a Canvas source slug without repeating the platform name in the local artifact.
+ *
+ * @param value - Canvas module item title.
+ *
+ * @return Readable source slug with no leading `canvas-` label.
+ */
+function sourceName(value: string): string {
+	return sName(value).replace(/^canvas-+/, '') || 'resource';
+}
+
+/**
  * Produces a safe Canvas download filename while preserving a short extension.
  *
  * @param value - Suggested filename from Canvas or an item title.
@@ -299,7 +310,30 @@ export function sanitizeCanvasFileName(value: string): string {
 	const norm = path.basename(value.replaceAll('\\', '/'));
 	const ext = path.extname(norm).toLowerCase();
 	const sExt = /^\.[a-z0-9]{1,10}$/.test(ext) ? ext : '';
-	return `${sName(sExt ? norm.slice(0, -sExt.length) : norm)}${sExt}`;
+	const name = sName(sExt ? norm.slice(0, -sExt.length) : norm).replace(/^canvas-+/, '');
+	return `${name || 'resource'}${sExt}`;
+}
+
+/**
+ * Removes Canvas navigation labels and duplicate page headings from captured body text.
+ *
+ * @param value - Text extracted from a Canvas page's content region.
+ * @param title - Visible title already stored in the capture provenance header.
+ *
+ * @return Body text without page chrome.
+ */
+export function sanitizeCanvasPageText(value: string, title: string): string {
+	const lines = value
+		.replaceAll('\u00a0', ' ')
+		.split(/\r?\n/u)
+		.filter(line => !/^\s*(?:skip to content|previous|next)\s*$/iu.test(line));
+	while (lines.length && !lines[0].trim()) lines.shift();
+	if (lines[0]?.trim().toLocaleLowerCase() === title.trim().toLocaleLowerCase()) lines.shift();
+	return lines
+		.join('\n')
+		.replace(/[ \t]+\n/gu, '\n')
+		.replace(/\n{3,}/gu, '\n\n')
+		.trim();
 }
 
 /**
@@ -525,34 +559,48 @@ export async function readCanvasPage(page: Page, item: CanvasItem): Promise<{ te
 			{ timeout: 30_000 },
 		)
 		.catch(ignoreCanvasWaitFailure);
-	// Reads the visible Canvas content container with the most text.
-	const bodyText = await page.evaluate(function (): string {
-		let largestText = '';
-		for (const selector of ['#content', '#wiki_page_show .show-content', '.show-content', 'main']) {
-			for (const el of document.querySelectorAll<HTMLElement>(selector)) {
-				const text = el.innerText?.trim() || '';
-				if (text && el.getBoundingClientRect().height > 0 && text.length > largestText.length) largestText = text;
+	// Reads the most complete Canvas page body after removing navigation and application chrome.
+	const captured = await page.evaluate(function (): { text: string; links: RawCanvasLink[] } {
+		const selectors = ['#wiki_page_show .user_content', '.show-content .user_content', '#wiki_page_show .show-content', '.show-content', 'main', '#content'];
+		const chrome = [
+			'nav',
+			'aside',
+			'header',
+			'footer',
+			'[role="navigation"]',
+			'[aria-label="Breadcrumb"]',
+			'#left-side',
+			'#right-side',
+			'#breadcrumbs',
+			'.ic-app-header',
+			'.ic-app-nav-toggle-and-crumbs',
+			'.module-sequence-footer',
+			'.course-menu',
+			'.page-action-list',
+		];
+		let best = { text: '', links: [] as RawCanvasLink[] };
+		const seen = new Set<HTMLElement>();
+		for (const selector of selectors) {
+			for (const element of document.querySelectorAll<HTMLElement>(selector)) {
+				if (seen.has(element) || element.getBoundingClientRect().height <= 0) continue;
+				seen.add(element);
+				const clone = element.cloneNode(true) as HTMLElement;
+				for (const node of clone.querySelectorAll(chrome.join(','))) node.remove();
+				const text = clone.innerText?.trim() || clone.textContent?.trim() || '';
+				if (text.length <= best.text.length) continue;
+				best = {
+					text,
+					links: Array.from(clone.querySelectorAll<HTMLAnchorElement>('a[href]'), link => ({ title: link.innerText.trim() || link.textContent?.trim() || '', url: link.href })),
+				};
 			}
 		}
-		return largestText;
+		return best;
 	});
+	const bodyText = sanitizeCanvasPageText(captured.text, item.title);
 	if (!bodyText) throw new Error(`Canvas page returned no readable content after redirect to ${safeCanvasUrl(page.url())}.`);
 	const seen = new Set<string>();
-	// Extracts link labels and absolute URLs from selected Canvas page elements.
-	const discoveredLinks = await page
-		.locator('#content, #wiki_page_show .show-content, .show-content, main')
-		.first()
-		.locator('a[href]')
-		.evaluateAll(function (nodes: Element[]): RawCanvasLink[] {
-			const links: RawCanvasLink[] = [];
-			for (const node of nodes) {
-				const link = node as HTMLAnchorElement;
-				links.push({ title: link.textContent?.trim() || '', url: link.href });
-			}
-			return links;
-		});
 	const files: CanvasItem[] = [];
-	for (const link of discoveredLinks) {
+	for (const link of captured.links) {
 		const fileUrl = canvasFileUrl(link.url);
 		if (!fileUrl || seen.has(fileUrl)) continue;
 		seen.add(fileUrl);
@@ -636,7 +684,7 @@ export async function scrapeCanvasGroup(options: {
 					continue;
 				}
 				record.text += `${record.text ? '\n\n---\n\n' : ''}${content.text}`;
-				const pagePath = path.join(folder, `${sName(group.title)}-${index}-${sName(item.title)}.txt`);
+				const pagePath = path.join(folder, `${sName(group.title)}-${index}-${sourceName(item.title)}.txt`);
 				await writeFile(pagePath, content.text);
 				entry.localPath = pagePath;
 				entry.status = 'captured';
@@ -644,6 +692,20 @@ export async function scrapeCanvasGroup(options: {
 				items.push(...content.files.map(file => ({ ...file, parentSourceId: srcId })));
 			} else if (item.type === 'file') {
 				const src = canvasFileUrl(item.url);
+				const isModuleItem = /^\/courses\/\d+\/modules\/items\/\d+\/?$/.test(new URL(item.url).pathname);
+				if (!src && isModuleItem) {
+					// Canvas module file rows may route to a content page that hosts the actual downloads.
+					log(`resolving Canvas file page ${item.title}`);
+					const content = await readCanvasPage(page, item);
+					record.text += `${record.text ? '\n\n---\n\n' : ''}${content.text}`;
+					const pagePath = path.join(folder, `${sName(group.title)}-${index}-${sourceName(item.title)}.txt`);
+					await writeFile(pagePath, content.text);
+					entry.localPath = pagePath;
+					entry.status = 'captured';
+					entry.reason = null;
+					items.push(...content.files.map(file => ({ ...file, parentSourceId: srcId })));
+					continue;
+				}
 				if (downloaded.has(identity)) {
 					entry.status = 'duplicate';
 					entry.reason = 'File already downloaded in this module.';

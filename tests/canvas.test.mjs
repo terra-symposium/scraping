@@ -30,6 +30,7 @@ import {
 	readCanvasPage,
 	safeCanvasUrl,
 	sanitizeCanvasFileName,
+	sanitizeCanvasPageText,
 	scrapeCanvas,
 	scrapeCanvasGroup,
 } from '../dist/canvas.js';
@@ -79,7 +80,7 @@ function canvasPageFixture(options = {}) {
 				assert.equal(p(new URL(pageUrl)), true);
 			},
 			waitForFunction: async () => {},
-			evaluate: async () => 'Canvas course page text',
+			evaluate: async () => ({ text: 'Canvas course page text', links: [{ title: 'Slides', url: 'https://canvas.example/courses/9/files/44' }] }),
 			locator: s => {
 				const locator = {
 					first: () => locator,
@@ -122,6 +123,8 @@ test('Canvas URL and file helpers normalize routes, names, and preview responses
 	assert.equal(canvasResponseFileName("attachment; filename*=UTF-8''Lecture%20notes.pdf"), 'Lecture notes.pdf');
 	assert.equal(inferCanvasFileName('lecture.bin', 'application/pdf; charset=binary'), 'lecture.pdf');
 	assert.equal(sanitizeCanvasFileName('../../Lecture Notes.pdf'), 'lecture-notes.pdf');
+	assert.equal(sanitizeCanvasFileName('Canvas - Lecture Notes.pdf'), 'lecture-notes.pdf');
+	assert.equal(sanitizeCanvasPageText('Skip to content\nIntroduction\nRead the notes.\nPrevious\nNext', 'Introduction'), 'Read the notes.');
 	assert.equal(isCanvasPreviewBody(Buffer.from('<html><body class="ic-Layout">Preview</body></html>'), 'text/html'), true);
 	assert.equal(isCanvasPreviewBody(Buffer.from('<html><body>Not a Canvas preview</body></html>'), 'text/html'), false);
 });
@@ -204,6 +207,61 @@ test('Canvas group export deduplicates downloads and strips secrets from recorde
 		assert.equal(downloadedFile.sourceUrl, 'https://canvas.example/courses/9/files/44');
 		assert.equal(await readFile(downloadedFile.path, 'utf8'), 'pdf bytes');
 		assert.doesNotMatch(JSON.stringify(result), /student|reader:secret|token=private|other=private/u);
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});
+
+test('Canvas module file pages capture their content and download linked attachments', async () => {
+	const root = await mkdtemp(path.join(os.tmpdir(), 'canvas-module-file-'));
+	const requestedUrls = [];
+	const bodyText = 'Forum 05\nRead the structures and file-processing notes.\nRelevant chapters: 10 and 11.';
+	const links = [
+		{ title: 'F05 structures and file processing.pdf', url: 'https://canvas.example/courses/9/files/51' },
+		{ title: 'F05_fullcodes.zip', url: 'https://canvas.example/courses/9/files/52' },
+	];
+	const page = {
+		goto: async () => {},
+		url: () => 'https://canvas.example/courses/9/pages/forum05-structures-and-file-processing',
+		waitForURL: async () => {},
+		waitForLoadState: async () => {},
+		waitForFunction: async () => {},
+		evaluate: async () => ({ text: bodyText, links }),
+		locator: () => ({ first: () => ({ locator: () => ({ evaluateAll: async () => links }) }) }),
+	};
+	try {
+		const result = await scrapeCanvasGroup({
+			page,
+			request: {
+				get: async url => {
+					requestedUrls.push(url);
+					return {
+						ok: () => true,
+						status: () => 200,
+						url: () => url,
+						headers: () => ({
+							'content-disposition': `attachment; filename="${url.endsWith('/51/download?download_frd=1') ? 'F05.pdf' : 'F05.zip'}"`,
+							'content-type': url.endsWith('/51/download?download_frd=1') ? 'application/pdf' : 'application/zip',
+						}),
+						body: async () => Buffer.from(url.endsWith('/51/download?download_frd=1') ? '%PDF-1.7 fixture' : 'zip fixture'),
+						dispose: async () => {},
+					};
+				},
+			},
+			course: { title: 'Course', url: 'https://canvas.example/courses/9' },
+			group: { title: 'Topic 5', items: [{ title: 'FORUM05 - Structures and file processing', url: 'https://canvas.example/courses/9/modules/items/81', type: 'file' }] },
+			output: root,
+		});
+
+		assert.equal(result.items[0].status, 'captured');
+		assert.match(await readFile(result.items[0].localPath, 'utf8'), /Relevant chapters: 10 and 11/u);
+		assert.deepEqual(requestedUrls, ['https://canvas.example/courses/9/files/51/download?download_frd=1', 'https://canvas.example/courses/9/files/52/download?download_frd=1']);
+		assert.deepEqual(
+			result.files.filter(file => file.name.endsWith('.pdf') || file.name.endsWith('.zip')).map(file => file.name),
+			['F05.pdf', 'F05.zip'],
+		);
+		assert.equal(result.items.length, 3);
+		assert.ok(result.items.slice(1).every(item => item.status === 'captured'));
 	} finally {
 		await rm(root, { recursive: true, force: true });
 	}
