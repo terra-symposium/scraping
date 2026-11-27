@@ -27,8 +27,8 @@
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
-		"@terra-symposium/docs": "^0.4.37",
-		"@terra-symposium/hygiene": "2.5.9",
+		"@terra-symposium/docs": "latest",
+		"@terra-symposium/hygiene": "latest",
 		"eslint": "^10.13.0",
 		"globals": "^17.13.0",
 		"knip": "^6.44.1",
