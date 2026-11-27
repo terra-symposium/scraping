@@ -12,11 +12,11 @@ importers:
         specifier: ^10.0.1
         version: 10.0.1(eslint@10.14.0(jiti@1.21.7))
       '@terra-symposium/docs':
-        specifier: ^0.4.35
-        version: 0.4.35(@astrojs/markdown-satteri@0.4.10)(@types/node@26.6.6)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(jiti@1.21.7)(vite@8.3.8(@types/node@26.6.6)(jiti@1.21.7)(yaml@2.9.1))(xstate@5.33.4)
+        specifier: ^0.4.36
+        version: 0.4.36(@astrojs/markdown-satteri@0.4.10)(@types/node@26.6.6)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(jiti@1.21.7)(vite@8.3.8(@types/node@26.6.6)(jiti@1.21.7)(yaml@2.9.1))(xstate@5.33.4)
       '@terra-symposium/hygiene':
-        specifier: 2.5.8
-        version: 2.5.8(eslint@10.14.0(jiti@1.21.7))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+        specifier: 2.5.9
+        version: 2.5.9(eslint@10.14.0(jiti@1.21.7))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       eslint:
         specifier: ^10.13.0
         version: 10.14.0(jiti@1.21.7)
@@ -1888,13 +1888,13 @@ packages:
       react: '>=18'
       react-dom: '>=18'
 
-  '@terra-symposium/docs@0.4.35':
-    resolution: {integrity: sha512-EQhq1Bb6Vhm5fgQ1C3hAQhuHTOI3RlCV0cjOZK4DpX6ZQPHIhgvDqOPL9rudeZULqq0LhiNOIbOhp9hR/fZEiQ==}
+  '@terra-symposium/docs@0.4.36':
+    resolution: {integrity: sha512-ComdsqxYiDobpIRpAdac9RJpDbshHKRmuju0q/baNdufAAge3tEAE5atCSNswdXs7TjhNdI5yLIe78UHPnN2uw==}
     engines: {node: '>=24.12.0'}
     hasBin: true
 
-  '@terra-symposium/hygiene@2.5.8':
-    resolution: {integrity: sha512-fBt0hAqvh3nyWSuB6QSI43mQ1Ak5gVKu0vKOmWRxVJ3tXm+N8I7Gls0IwTrWmngUKXZy4kB24zosa1jHWoEyTA==}
+  '@terra-symposium/hygiene@2.5.9':
+    resolution: {integrity: sha512-lTXyKKKIvkKJj2cCcD8DcUElwoYCxIofpn5QsiFnPrgteDSgUeOxGkF84xcTq2r3rjTzXqbiCZZNY9pd9TEibA==}
     engines: {node: '>=18.18'}
     hasBin: true
     peerDependencies:
@@ -6593,7 +6593,7 @@ snapshots:
       react: 19.3.1
       react-dom: 19.3.1(react@19.3.1)
 
-  '@terra-symposium/docs@0.4.35(@astrojs/markdown-satteri@0.4.10)(@types/node@26.6.6)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(jiti@1.21.7)(vite@8.3.8(@types/node@26.6.6)(jiti@1.21.7)(yaml@2.9.1))(xstate@5.33.4)':
+  '@terra-symposium/docs@0.4.36(@astrojs/markdown-satteri@0.4.10)(@types/node@26.6.6)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(jiti@1.21.7)(vite@8.3.8(@types/node@26.6.6)(jiti@1.21.7)(yaml@2.9.1))(xstate@5.33.4)':
     dependencies:
       '@astrojs/markdown-remark': 7.3.5
       '@astrojs/mdx': 8.1.2(@astrojs/markdown-remark@7.3.5)(@astrojs/markdown-satteri@0.4.10)(astro@7.4.13(@astrojs/markdown-remark@7.3.5)(@types/node@26.6.6)(jiti@1.21.7)(yaml@2.9.1))
@@ -6671,7 +6671,7 @@ snapshots:
       - vite
       - xstate
 
-  '@terra-symposium/hygiene@2.5.8(eslint@10.14.0(jiti@1.21.7))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
+  '@terra-symposium/hygiene@2.5.9(eslint@10.14.0(jiti@1.21.7))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
     dependencies:
       '@terra-symposium/boundaries': 0.2.3(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       typescript: 5.9.3
